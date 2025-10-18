@@ -1,6 +1,8 @@
 const WebSocket = require("ws");
 const roomManagerModule = require("./roomManager");
 const constants = require("../config/constants");
+const redisService = require("./redisService");
+const dbService = require("./dbService");
 
 const TICK_INTERVAL = constants.TICK_INTERVAL || 50;
 const MAX_PLAYERS_PER_ROOM = parseInt(process.env.MAX_PLAYERS_PER_ROOM, 10) || 6;
@@ -13,7 +15,7 @@ module.exports = (wss) => {
   wss.on("connection", ws => {
     console.log("WS connected");
 
-    ws.on("message", msg => {
+    ws.on("message", async msg => {
       let data;
       try { 
         data = JSON.parse(msg); 
@@ -69,8 +71,8 @@ module.exports = (wss) => {
             });
             
             // 自動的にゲーム開始
-            setTimeout(() => {
-              joinedRoom.startGame();
+            setTimeout(async () => {
+              await joinedRoom.startGame();
               broadcastToRoom(joinedRoom, {
                 type: "gameStart",
                 payload: joinedRoom.toJSON()
@@ -86,7 +88,8 @@ module.exports = (wss) => {
                 maxPlayers: joinedRoom.maxPlayers,
                 players: Object.values(joinedRoom.players).map(p => ({
                   id: p.id,
-                  name: p.name
+                  name: p.name,
+                  team: p.team
                 }))
               }
             });
@@ -96,8 +99,17 @@ module.exports = (wss) => {
         // update: 位置・状態の更新
         case "update":
           if (playerId && room) {
-            // Redis: 位置情報をRedisに保存（他のサーバーインスタンスと同期）
+            // Roomの状態を更新
             room.updatePlayer(playerId, payload);
+
+            // Redis: 位置情報をRedisに保存（他のサーバーインスタンスと同期）
+            await redisService.setPlayerPosition(
+              playerId,
+              payload.x || room.players[playerId]?.x,
+              payload.z || room.players[playerId]?.z,
+              payload.direction || room.players[playerId]?.direction,
+              payload.state || room.players[playerId]?.state
+            );
           }
           break;
 
@@ -115,6 +127,7 @@ module.exports = (wss) => {
             console.log(`[${leftRoom?.roomId || "unknown"}] Player left: ${playerId}`);
             
             // Redis: 削除されたプレイヤーの位置情報をクリア
+            await redisService.deletePlayerPosition(playerId);
             
             ws.room = null;
             ws.roomId = null;
@@ -125,18 +138,36 @@ module.exports = (wss) => {
         case "control":
           if (room) {
             if (payload.command === "startGame") {
-              room.startGame();
+              await room.startGame();
               broadcastToRoom(room, {
                 type: "gameStart",
                 payload: room.toJSON()
               });
             } else if (payload.command === "endGame") {
-              room.endGame();
-              // DB: ここでDBサービスに試合結果を保存
-              broadcastToRoom(room, {
-                type: "gameEnd",
-                payload: room.toJSON()
-              });
+              try {
+                // awaitを追加してエラーハンドリング
+                const result = await room.endGame();
+                
+                broadcastToRoom(room, {
+                  type: "gameEnd",
+                  payload: {
+                    ...room.toJSON(),
+                    matchId: result.matchId
+                  }
+                });
+                
+                console.log(`✅ Game ended and saved: Match ID ${result.matchId}`);
+              } catch (error) {
+                console.error("❌ Failed to end game:", error);
+                
+                // エラーをクライアントに通知
+                broadcastToRoom(room, {
+                  type: "error",
+                  payload: {
+                    message: "Failed to save match result"
+                  }
+                });
+              }
             } else if (payload.command === "restart") {
               room.restart();
               broadcastToRoom(room, {
@@ -155,32 +186,45 @@ module.exports = (wss) => {
     // 接続完了時は何も送らない（joinを待つ）
 
     // 切断時
-    ws.on("close", () => {
+    ws.on("close", async () => {
       if (ws.playerId && ws.room) {
         roomManager.removePlayerFromRoom(ws.playerId);
+        
+        // Redis: 切断時もプレイヤーの位置情報を削除
+        await redisService.deletePlayerPosition(ws.playerId);
+        
         console.log(`[${ws.roomId}] Player disconnected: ${ws.playerId}`);
       }
     });
   });
 
   // tick: 50msごとに全体状態を同期
-  setInterval(() => {
-    // Redis: 全プレイヤーの位置情報をRedisから読み込む
-    
-    // すべての部屋でtickを実行
-    for (const roomId in roomManager.rooms) {
-      const room = roomManager.rooms[roomId];
-      room.tick();
-      
-      // ゲーム中の場合のみ状態を配信
-      if (room.state === "playing") {
-        const stateMsg = JSON.stringify({ 
-          type: "tick", 
-          payload: room.toJSON() 
-        });
+  setInterval(async () => {
+    try {
+      // Redis: 全プレイヤーの位置情報をRedisから読み込む
+      const redisPositions = await redisService.getAllPositions();
+
+      // すべての部屋でtickを実行
+      for (const roomId in roomManager.rooms) {
+        const room = roomManager.rooms[roomId];
         
-        broadcastToRoom(room, stateMsg);
+        // Redis: Redisの位置情報でRoomを更新（定期的な同期）
+        room.updateFromRedis(redisPositions);
+        
+        room.tick();
+        
+        // ゲーム中の場合のみ状態を配信
+        if (room.state === "playing") {
+          const stateMsg = JSON.stringify({ 
+            type: "tick", 
+            payload: room.toJSON() 
+          });
+          
+          broadcastToRoom(room, stateMsg);
+        }
       }
+    } catch (error) {
+      console.error("❌ Tick loop error:", error);
     }
   }, TICK_INTERVAL);
 

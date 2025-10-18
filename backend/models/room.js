@@ -1,5 +1,7 @@
 const Player = require("./player");
 const Ball = require("./ball");
+const dbService = require("../services/dbService");
+const redisService = require("../services/redisService");
 
 const STUN_DURATION = 1000;
 const CANVAS_WIDTH = 600;
@@ -84,8 +86,38 @@ class Room {
     }
   }
 
+  /**
+   * ✅ Redisから取得した位置情報でプレイヤーを更新
+   * @param {Object} redisPositions - { "p_1234": { x, z, direction, state }, ... }
+   */
   updateFromRedis(redisPositions) {
-    // Redis実装時に使用
+    if (!redisPositions || Object.keys(redisPositions).length === 0) {
+      return;
+    }
+
+    Object.keys(redisPositions).forEach(playerId => {
+      const player = this.players[playerId];
+      if (!player) return;
+
+      const redisData = redisPositions[playerId];
+      
+      // スタン中は更新しない
+      if (player.state === "stun") return;
+
+      // Redis の位置情報で更新
+      if (redisData.x !== undefined) {
+        player.x = Math.max(0, Math.min(CANVAS_WIDTH, redisData.x));
+      }
+      if (redisData.z !== undefined) {
+        player.z = Math.max(0, Math.min(CANVAS_HEIGHT, redisData.z));
+      }
+      if (redisData.direction !== undefined) {
+        player.direction = (redisData.direction % 360 + 360) % 360;
+      }
+      if (redisData.state !== undefined && redisData.state !== "stun") {
+        player.state = redisData.state;
+      }
+    });
   }
 
   handleAction(playerId, actionData) {
@@ -246,15 +278,47 @@ class Room {
     console.log(`[Room ${this.roomId}] Matching started`);
   }
 
-  startGame() { 
+  async startGame() {
     this.state = "playing";
     this.initPositions();
+
+    try {
+      const redisService = require("../services/redisService");
+      await redisService.clearAllPositions();
+      console.log(`[Room ${this.roomId}] Redis positions cleared for new game`);
+    } catch (error) {
+      console.error("❌ Failed to clear Redis positions:", error);
+    }
+
     console.log(`[Room ${this.roomId}] Game started`);
   }
 
-  endGame() { 
+  async endGame() { 
     this.state = "finished";
-    // DB: ここでDBサービスに試合結果を保存
+
+    console.log(`[Room ${this.roomId}] Game ended. Saving to database...`);
+    
+    // DB: PostgreSQLに試合結果を保存
+    try {
+      const matchData = {
+        score: this.score,
+        players: this.players
+      };
+      
+      const result = await dbService.saveMatchResult(matchData);
+      console.log(`✅ Match result saved to database (Match ID: ${result.matchId})`);
+      
+      // ✅ Redis: 試合終了後にプレイヤー位置情報をクリア
+      const redisService = require("../services/redisService");
+      await redisService.clearAllPositions();
+      console.log("✅ Redis player positions cleared");
+      
+      return result;
+      
+    } catch (error) {
+      console.error("❌ Failed to save match result in room.endGame:", error);
+      throw error;
+    }
   }
 
   restart() {
