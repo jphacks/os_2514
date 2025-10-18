@@ -1,9 +1,4 @@
-// =================================================================================
-// UI Manager (UIManager.js)
-// 責務：全てのDOM要素の参照を保持し、UIの更新メソッドを提供する。
-// =================================================================================
 export default class UIManager {
-    // DOM Elements
     scoreboard = document.getElementById('scoreboard');
     scoreAlphaEl = document.getElementById('score-alpha');
     scoreBravoEl = document.getElementById('score-bravo');
@@ -15,7 +10,8 @@ export default class UIManager {
     debugResetButton = document.getElementById('debug-reset-button');
     powerGaugeContainer = document.getElementById('power-gauge-container');
     powerGaugeFill = document.getElementById('power-gauge');
-    
+    goalEffectEl = document.getElementById('goal-effect');
+
     constructor() {
         this.scoreboard.style.display = 'flex';
         this.debugMonitor.querySelector('h3').addEventListener('click', () => {
@@ -35,27 +31,20 @@ export default class UIManager {
     }
 
     updateDebugMonitor(playerModel, ballModel) {
-        if (!playerModel) return;
+        if (!playerModel || !this.debugMonitor) return;
         const toFixed = (v) => v.toFixed(1);
-        
-        this.debugPlayerState.textContent = playerModel.getState();
-        const pos = playerModel.getPosition();
-        this.debugPlayerPos.textContent = `x:${toFixed(pos.x)} z:${toFixed(pos.z)}`;
-        
-        const ownerId = ballModel.getOwner();
-        this.debugBallOwner.textContent = ownerId ? ownerId : 'None';
-    }
 
-    updateDebugMonitor(playerModel, ballModel) {
-        if (!playerModel) return;
-        const toFixed = (v) => v.toFixed(1);
-        
-        this.debugPlayerState.textContent = playerModel.getState();
-        const pos = playerModel.getPosition();
-        this.debugPlayerPos.textContent = `x:${toFixed(pos.x)} z:${toFixed(pos.z)}`;
-        
-        const ownerId = ballModel.getOwner();
-        this.debugBallOwner.textContent = ownerId ? ownerId : 'None';
+        if (this.debugPlayerState) {
+            this.debugPlayerState.textContent = playerModel.getState();
+        }
+        if (this.debugPlayerPos) {
+            const pos = playerModel.getPosition();
+            this.debugPlayerPos.textContent = `x:${toFixed(pos.x)} z:${toFixed(pos.z)}`;
+        }
+        if (this.debugBallOwner) {
+            const ownerId = ballModel?.getOwner();
+            this.debugBallOwner.textContent = ownerId ? ownerId : 'None';
+        }
     }
 
     showPowerGauge() {
@@ -76,12 +65,23 @@ export default class UIManager {
         const clamped = Math.max(0, Math.min(1, ratio));
         this.powerGaugeFill.style.width = `${Math.round(clamped * 100)}%`;
     }
+    
+    showGoalEffect(team, scorerModel) {
+        if (!this.goalEffectEl) return;
+        
+        const teamName = team === 'alpha' ? 'アルファ' : 'ブラボー';
+        const scorerName = scorerModel ? (scorerModel.isUser() ? "あなた" : scorerModel.getId()) : "オウンゴール";
+        
+        this.goalEffectEl.textContent = `${teamName}チームのゴール！ (${scorerName})`;
+        this.goalEffectEl.style.color = team === 'alpha' ? '#ff4141' : '#4195ff';
+        this.goalEffectEl.style.opacity = '1';
+
+        setTimeout(() => {
+            this.goalEffectEl.style.opacity = '0';
+        }, 2500); // 2.5秒でフェードアウト
+    }
 
     getResetButton() {
         return this.debugResetButton;
-    }
-
-    showGoalEffect(team, scorer) {
-        // ...
     }
 }

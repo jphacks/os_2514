@@ -1,0 +1,12 @@
+export class PlayerStates {
+    static Idle = 'Idle';
+    static Run = 'Run';
+    static Charge = 'Charge';
+    static Kick = 'Kick';
+
+    static values() {
+        return [this.Idle, this.Run, this.Charge, this.Kick];
+    }
+}
+
+Object.freeze(PlayerStates);
