@@ -8,35 +8,35 @@
 
 - ランタイム: Node.js 20（`.nvmrc` にバージョン固定: 20.19.2）
 - フレームワーク/ライブラリ:
- 	- Express: REST API と静的配信
- 	- ws: WebSocket サーバー
+  - Express: REST API と静的配信
+  - ws: WebSocket サーバー
 - ポート: デフォルト 3000（`server.js` 内で固定）
 - ヘルスチェック: `GET /health`（200 OK / "OK"）
 - 静的配信: `backend/public/` 配下（任意、現在はディレクトリ未作成）
 
 ## ディレクトリ構成
 
-```
+```text
 backend/
- server.js              # Express + WebSocket エントリポイント
- package.json           # 依存関係と npm scripts
- .nvmrc                 # Node.js の推奨バージョン
- config/
-  constants.js         # サーバーの同期間隔などの定数
- routes/
-  index.js             # /api 以下の REST ルーティング
- controllers/
-  roomController.js    # ルーム制御（開始/終了/状態取得）
-  playerController.js  # プレイヤー参加/情報取得
-  matchController.js   # 試合結果保存（ダミー）
- models/
-  player.js            # プレイヤーモデル
-  ball.js              # ボールモデル
- services/
-  room.js              # ルームのゲームロジック（シングルトン）
-  syncService.js       # WebSocket イベント処理と tick 配信
-  dbService.js         # PostgreSQL 連携の枠（未実装）
-  redisService.js      # Redis 同期の枠（未実装）
+  server.js              # Express + WebSocket エントリポイント
+  package.json           # 依存関係と npm scripts
+  .nvmrc                 # Node.js の推奨バージョン
+  config/
+    constants.js         # サーバーの同期間隔などの定数
+  routes/
+    index.js             # /api 以下の REST ルーティング
+  controllers/
+    roomController.js    # ルーム制御（開始/終了/状態取得）
+    playerController.js  # プレイヤー参加/情報取得
+    matchController.js   # 試合結果保存（ダミー）
+  models/
+    player.js            # プレイヤーモデル
+    ball.js              # ボールモデル
+  services/
+    room.js              # ルームのゲームロジック（シングルトン）
+    syncService.js       # WebSocket イベント処理と tick 配信
+    dbService.js         # PostgreSQL 連携の枠（未実装）
+    redisService.js      # Redis 同期の枠（未実装）
 ```
 
 ## 前提条件
@@ -81,43 +81,46 @@ npm start
 ベースパス: `/api`
 
 - `GET /health`
- 	- 200 OK, ボディは `OK`（API ルートの外側に存在）
+  - 200 OK, ボディは `OK`（API ルートの外側に存在）
 
 - `GET /api/room`
- 	- ルームの現在状態を返します。
- 	- レスポンス例（簡略）:
-  ```json
-  {
-   "state": "waiting|playing|finished",
-   "score": { "alpha": 0, "bravo": 0 },
-   "ball": { "x": 300, "z": 200, "ownerId": null },
-   "players": [ { "id": "p_1234", "name": "Alice", "team": "alpha", ... } ]
-  }
-  ```
+  - ルームの現在状態を返します。
+  - レスポンス例（簡略）:
+
+    ```json
+    {
+      "state": "waiting|playing|finished",
+      "score": { "alpha": 0, "bravo": 0 },
+      "ball": { "x": 300, "z": 200, "ownerId": null },
+      "players": [ { "id": "p_1234", "name": "Alice", "team": "alpha", ... } ]
+    }
+    ```
 
 - `POST /api/room/start`
- 	- ゲームを開始します。戻り値に最新のルーム状態。
+  - ゲームを開始します。戻り値に最新のルーム状態。
 
 - `POST /api/room/end`
- 	- ゲームを終了します。戻り値に最新のルーム状態。
+  - ゲームを終了します。戻り値に最新のルーム状態。
 
 - `POST /api/player/join`
- 	- プレイヤーをルームに参加させます。
- 	- リクエスト JSON 例:
-  ```json
-  { "name": "Alice", "team": "alpha" }
-  ```
+  - プレイヤーをルームに参加させます。
+  - リクエスト JSON 例:
 
-	- レスポンス例:
-  ```json
-  { "success": true, "player": { "id": "p_1234", "name": "Alice", "team": "alpha", ... } }
-  ```
+    ```json
+    { "name": "Alice", "team": "alpha" }
+    ```
+
+  - レスポンス例:
+
+    ```json
+    { "success": true, "player": { "id": "p_1234", "name": "Alice", "team": "alpha", ... } }
+    ```
 
 - `GET /api/player/:id`
- 	- 指定 ID のプレイヤー情報。
+  - 指定 ID のプレイヤー情報。
 
 - `POST /api/match/save`
- 	- 試合結果の保存（ダミー実装）。
+  - 試合結果の保存（ダミー実装）。
 
 curl サンプル（参考）:
 
@@ -141,9 +144,9 @@ curl -s -X POST http://localhost:3000/api/player/join \
 
 - エンドポイント: `ws://localhost:3000/`
 - 接続直後に現在のルーム状態が一度送られます。
- 	- 形式: `{ "type": "roomState", "payload": <roomJSON> }`
+  - 形式: `{ "type": "roomState", "payload": <roomJSON> }`
 - サーバーは `TICK_INTERVAL` 毎に全体状態をブロードキャストします。
- 	- 形式: `{ "type": "tick", "payload": <roomJSON> }`
+  - 形式: `{ "type": "tick", "payload": <roomJSON> }`
 
 クライアントから送信できるメッセージ（例）:
 
@@ -187,15 +190,15 @@ wscat -c ws://localhost:3000/
 - ルームはシングルトン（`services/room.js`）。`state`: `waiting|playing|finished`
 - ボール/プレイヤーの座標は 2D（x,z）。キャンバス想定サイズ: 600x400
 - アクション:
- 	- kick: 所有者のみ。ボールに速度付与（減衰あり）
- 	- tackle: 近距離の敵（< 30）をスタン（1秒）。ボール所有者なら奪取
- 	- pass: 同チームの近距離味方（< 100）へ優先的に譲渡。候補がなければ kick
+  - kick: 所有者のみ。ボールに速度付与（減衰あり）
+  - tackle: 近距離の敵（< 30）をスタン（1秒）。ボール所有者なら奪取
+  - pass: 同チームの近距離味方（< 100）へ優先的に譲渡。候補がなければ kick
 - ボール所有（ownerId）がある場合、所有者の座標に追従
 - ゴール判定:
- 	- 左ゴール: `x < 10 && 150 < z < 250` -> bravo に加点
- 	- 右ゴール: `x > 590 && 150 < z < 250` -> alpha に加点
+  - 左ゴール: `x < 10 && 150 < z < 250` -> bravo に加点
+  - 右ゴール: `x > 590 && 150 < z < 250` -> alpha に加点
 - 同期:
- 	- 50ms 毎に `tick` を全クライアントへ送信（`config/constants.js`）
+  - 50ms 毎に `tick` を全クライアントへ送信（`config/constants.js`）
 
 ## 将来的な拡張（コード中のフック）
 
@@ -205,13 +208,12 @@ wscat -c ws://localhost:3000/
 ## トラブルシュート
 
 - Node バージョンでエラーが出る
- 	- `nvm use` で `.nvmrc` のバージョンを使用してください。
+  - `nvm use` で `.nvmrc` のバージョンを使用してください。
 - ポート 3000 が使用中
- 	- 既存プロセスを終了するか、`server.js` のポートを変更してください。
+  - 既存プロセスを終了するか、`server.js` のポートを変更してください。
 - WebSocket に接続できない
- 	- サーバー起動中か確認し、ファイアウォール/プロキシを確認してください。
+  - サーバー起動中か確認し、ファイアウォール/プロキシを確認してください。
 
 ## ライセンス
 
 このリポジトリのライセンスはリポジトリルートの `LICENSE` を参照してください。
-
