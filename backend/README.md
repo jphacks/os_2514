@@ -36,7 +36,7 @@ backend/
     room.js              # ルームのゲームロジック（シングルトン）
     syncService.js       # WebSocket イベント処理と tick 配信
     dbService.js         # PostgreSQL 連携の枠（未実装）
-    redisService.js      # Redis 同期の枠（未実装）
+    RedisService.js      # Redis 同期の枠（未実装）
 ```
 
 ## 前提条件
@@ -202,7 +202,7 @@ wscat -c ws://localhost:3000/
 
 ## 将来的な拡張（コード中のフック）
 
-- Redis（`services/redisService.js`）: 複数サーバー間の位置情報同期のための枠
+- Redis（`services/RedisService.js`）: 複数サーバー間の位置情報同期のための枠
 - PostgreSQL（`services/dbService.js` / `controllers/matchController.js`）: 試合結果の保存枠
 
 ## トラブルシュート
