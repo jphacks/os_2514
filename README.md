@@ -1,36 +1,77 @@
-# サンプル（プロダクト名）
+# 机上バーチャルサッカー
 
 [![IMAGE ALT TEXT HERE](https://jphacks.com/wp-content/uploads/2025/05/JPHACKS2025_ogp.jpg)](https://www.youtube.com/watch?v=lA9EluZugD8)
 
 ## 製品概要
+
 ### 背景(製品開発のきっかけ、課題等）
+
+リアルタイム対戦ゲームでは、複数プレイヤー間での状態同期、ネットワーク遅延への対応、スケーラブルなサーバー構成が課題となります。特に、サッカーのような物理演算・衝突判定・リアルタイム位置同期が求められるゲームでは、クライアント・サーバー間の高頻度な通信と、複数サーバーインスタンス間でのプレイヤー状態共有が必要です。
+
 ### 製品説明（具体的な製品の説明）
+
+Three.js を用いた3Dサッカー風ミニゲームのフロントエンドと、Node.js + Express + WebSocket によるリアルタイム同期バックエンドで構成されたマルチプレイヤー対戦ゲームです。プレイヤーはブラウザからルームに参加し、リアルタイムでボールを蹴る・パス・タックルなどのアクションを行い、他プレイヤーと協力・対戦します。バックエンドは50ms間隔で全体状態をブロードキャストし、PostgreSQLで試合結果・統計を保存、Redisで複数サーバー間の位置情報を同期します。
+
 ### 特長
-#### 1. 特長1
-#### 2. 特長2
-#### 3. 特長3
+
+#### 1. リアルタイム同期アーキテクチャ
+
+- WebSocketによる双方向通信で、50ms周期のtick配信により低遅延でプレイヤー・ボールの位置をリアルタイム同期
+- Redisを用いた複数サーバーインスタンス間での位置情報共有により、水平スケーリングに対応
+
+#### 2. Docker Composeによるワンコマンド起動
+
+- フロントエンド（nginx）、バックエンド（Node.js）、DB（PostgreSQL）、Redis の全サービスを `docker compose up` で一括起動
+- 環境構築不要で、初回からすぐに動作確認可能
+
+#### 3. モノレポ構成とワークスペース管理
+
+- backend と db を npm workspaces で管理し、相対パス依存を排除
+- Dockerコンテナ内でもパッケージ名（os2514-db）で解決し、モジュール解決の安定性を確保
 
 ### 解決出来ること
+
+- リアルタイム対戦ゲームのサーバー構成・状態同期の実装パターンを提供
+- WebSocketとREST APIを組み合わせた、スケーラブルなマルチプレイヤーゲームの基盤
+- Docker + モノレポによる、開発・デプロイ環境の一貫性とメンテナンス性の向上
+
 ### 今後の展望
+
+- AI対戦相手の実装（プレイヤー不足時の自動補完）
+- ランキング・リーダーボード機能の拡充
+- モバイル対応UI・タッチ操作の最適化
+- トーナメント・リーグ戦モードの追加
+
 ### 注力したこと（こだわり等）
-* 
-* 
+
+* Docker ComposeとWorkspacesによる、ローカル開発からコンテナ環境まで一貫した依存解決と起動フロー
+* WebSocketによる高頻度tick配信（50ms）と、Redisを用いた複数サーバー間の位置情報同期の実装
 
 ## 開発技術
 ### 活用した技術
 #### API・データ
-* 
-* 
+- PostgreSQL: 試合結果・プレイヤー統計の永続化
+- Redis: 複数サーバーインスタンス間のプレイヤー位置情報共有
 
 #### フレームワーク・ライブラリ・モジュール
-* 
-* 
+- **フロントエンド**: Three.js (3Dレンダリング), ES Modules (CDN: jsdelivr)
+- **バックエンド**: Node.js 20, Express 4, ws (WebSocket), pg (PostgreSQL), redis 4
+- **インフラ**: Docker Compose, npm workspaces
 
 #### デバイス
-* 
-* 
+
+- モダンブラウザ（WebGL2対応）
+- デスクトップ・ラップトップ（キーボード・マウス操作）
 
 ### 独自技術
 #### ハッカソンで開発した独自機能・技術
-* 独自で開発したものの内容をこちらに記載してください
-* 特に力を入れた部分をファイルリンク、またはcommit_idを記載してください。
+
+- リアルタイム同期サーバー（WebSocket + Redis連携による複数インスタンス対応）
+  - [backend/services/syncService.js](backend/services/syncService.js)
+  - [backend/services/redisService.js](backend/services/redisService.js)
+- Three.jsによる3Dゲームロジックとプレゼンテーション層の分離（MVP パターン）
+  - [frontend/Game/Game/Match.js](frontend/Game/Game/Match.js)
+  - [frontend/Game/Player/](frontend/Game/Player/)
+- Docker + npm workspaces によるモノレポ構成とコンテナ化
+  - [backend/Dockerfile](backend/Dockerfile)
+  - [docker-compose.yml](docker-compose.yml)
