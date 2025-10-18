@@ -9,6 +9,8 @@ import { PlayerStates } from '../ConstData/PlayerStates.js';
 export default class PlayerPresenter {
     #model;
     #view;
+    #joystickReferenceAngle = null;
+    #joystickReferenceQuaternion = new THREE.Quaternion();
 
     /**
      * @param {PlayerModel} model ロジック状態を扱うモデル
@@ -48,11 +50,28 @@ export default class PlayerPresenter {
         const velocity = new THREE.Vector3();
 
         if (joystick?.active) {
-            const targetQuat = new THREE.Quaternion().setFromAxisAngle(
-                new THREE.Vector3(0, 1, 0),
-                joystick.angle
-            );
-            this.#model.setQuaternion(targetQuat);
+            if (this.#joystickReferenceAngle === null) {
+                this.#joystickReferenceAngle = joystick.angle;
+                this.#joystickReferenceQuaternion.copy(this.#model.getQuaternion());
+            }
+
+            const deltaAngle =
+                THREE.MathUtils.euclideanModulo(
+                    -joystick.angle - this.#joystickReferenceAngle + Math.PI,
+                    Math.PI * 2
+                ) - Math.PI;
+
+            const responsiveDelta = deltaAngle * C.JOYSTICK_SENSITIVITY;
+            const rotationDelta = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), responsiveDelta);
+
+            const nextQuat = this.#joystickReferenceQuaternion
+                .clone()
+                .multiply(rotationDelta)
+                .normalize();
+
+            this.#model.setQuaternion(nextQuat);
+        } else {
+            this.#joystickReferenceAngle = null;
         }
 
         if (keys?.KeyW) {
