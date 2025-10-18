@@ -11,9 +11,10 @@ const TACKLE_RANGE = 30;
 const PASS_RANGE = 100;
 
 class Room {
-  constructor(roomId, maxPlayers = 6) {
+  constructor(roomId, maxPlayers = 6, isPrivate = false) {
     this.roomId = roomId;
     this.maxPlayers = maxPlayers;
+    this.isPrivate = isPrivate; // 追加: カスタム部屋識別
     this.players = {};
     this.ball = new Ball();
     this.state = "waiting"; // waiting, matching, playing, finished
