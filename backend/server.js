@@ -3,13 +3,24 @@ const http = require('http');
 const path = require('path');
 const WebSocket = require('ws');
 
-require("dotenv").config();
-// Boot log for Cloud Run startup troubleshooting
-console.log("[BOOT] Starting backend...", {
-  NODE_ENV: process.env.NODE_ENV,
-  PORT: process.env.PORT,
-  HOST: process.env.HOST,
-});
+
+try {
+  require("dotenv").config();
+  const express = require('express');
+  const http = require('http');
+  const path = require('path');
+  const WebSocket = require('ws');
+  // ...既存の require 群...
+  // Boot log for Cloud Run startup troubleshooting
+  console.log("[BOOT] Starting backend...", {
+    NODE_ENV: process.env.NODE_ENV,
+    PORT: process.env.PORT,
+    HOST: process.env.HOST,
+  });
+} catch (err) {
+  console.error('[FATAL] Require failed:', err);
+  process.exit(1);
+}
 
 process.on("unhandledRejection", (reason) => {
   console.error("[FATAL] Unhandled Rejection:", reason);
@@ -77,8 +88,8 @@ const corsOptions = (() => {
       return cb(null, true);
     },
     credentials: true,
-    methods: ['GET','HEAD','PUT','PATCH','POST','DELETE','OPTIONS'],
-    allowedHeaders: ['Content-Type','Authorization'],
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   };
 })();
 
