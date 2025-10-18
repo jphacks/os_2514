@@ -61,6 +61,7 @@ window.addEventListener("message", (event) => {
     case "kick":
       console.log("[FingerTracking] kick received:", data);
       userPlayer.model.setState(PlayerStates.Kick);
+      userPlayer.resetVec();
       match.endKickCharge();
       break;
     case "run":
@@ -79,12 +80,12 @@ window.addEventListener("message", (event) => {
       match.beginKickCharge();
       userPlayer.model.setState(PlayerStates.Charge);
       userPlayer.model.setCharging(true);
-      userPlayer.model.setVelocity(new THREE.Vector3(0, 0, 0));
+      userPlayer.resetVec();
       break;
     case "idle":
       console.log("[FingerTracking] idle received:", data);
       userPlayer.model.setState(PlayerStates.Idle);
-      userPlayer.model.setVelocity(new THREE.Vector3(0, 0, 0));
+      userPlayer.resetVec();
       userPlayer.model.setCharging(false);
       break;
     default:
