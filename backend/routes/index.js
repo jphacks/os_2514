@@ -1,19 +1,17 @@
 const express = require("express");
 const router = express.Router();
-const playerController = require("../controllers/playerController");
-const roomController = require("../controllers/roomController");
-const matchController = require("../controllers/matchController");
 
-// Room API
-router.get("/room", roomController.getRoom);
-router.post("/room/start", roomController.startGame);
-router.post("/room/end", roomController.endGame);
+// 統計情報エンドポイント
+router.get("/stats", (req, res) => {
+  // DB: Redis実装時に適切な統計情報を取得
+  res.json({
+    message: "Stats endpoint - to be implemented with DB/Redis"
+  });
+});
 
-// Player API
-router.post("/player/join", playerController.join);
-router.get("/player/:id", playerController.getPlayerInfo);
-
-// Match API
-router.post("/match/save", matchController.saveMatchResult);
+// ヘルスチェック
+router.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
 
 module.exports = router;
