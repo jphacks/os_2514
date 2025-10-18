@@ -1,57 +1,112 @@
-require("dotenv").config();
+require('dotenv').config();
+const express = require('express');
+const http = require('http');
+const WebSocket = require('ws');
+const path = require('path');
 
-const express = require("express");
-const cors = require("cors");
-const http = require("http");
-const WebSocket = require("ws");
-const path = require("path");
-const routes = require("./routes");
-const syncService = require("./services/syncService");
+const ENV = require('./config/environment');
+const CONSTANTS = require('./config/constants');
+const GameLoopService = require('./services/GameLoopService');
+const WebSocketManager = require('./websocket/WebSocketManager');
+const { getRedisService } = require('./services/RedisService');
+const Logger = require('./utils/Logger');
+const GameEventSubscriber = require('./events/subscribers/GameEventSubscriber');
+const DatabaseSubscriber = require('./events/subscribers/DatabaseSubscriber');
+const WebSocketSubscriber = require('./events/subscribers/WebSocketSubscriber');
+const playerRoutes = require('./routes/playerRoutes');
+const matchRoutes = require('./routes/matchRoutes');
+const statsRoutes = require('./routes/statsRoutes');
+const { errorHandler } = require('./utils/ErrorHandler');
 
 const app = express();
-// CORS設定: 必要に応じてオリジンを指定
-app.use(cors({
-  origin: ["http://localhost:8080", "http://127.0.0.1:8080"], // フロントのURL
-  credentials: true
-}));
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// ミドルウェア
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
-app.use("/api", routes);
+app.use(express.static(path.join(__dirname, 'public')));
 
-// WebSocket
-syncService(wss);
+app.use('/api/players', playerRoutes);
+app.use('/api/matches', matchRoutes);
+app.use('/api/stats', statsRoutes);
 
-// 統計情報エンドポイント
-app.get("/api/stats", (_, res) => {
-  const stats = syncService.getRoomStats();
-  res.json(stats);
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
 });
 
-// マッチング設定エンドポイント（開発用）
-app.post("/api/config/max-players", (req, res) => {
-  const { maxPlayers } = req.body;
-  if (typeof maxPlayers !== 'number' || maxPlayers < 2) {
-    return res.status(400).json({ error: "maxPlayers must be a number >= 2" });
-  }
-  
-  const success = syncService.setMaxPlayersPerRoom(maxPlayers);
-  if (success) {
-    res.json({ success: true, maxPlayers });
-  } else {
-    res.status(400).json({ error: "Cannot change max players while games are running" });
+let wsManager;
+let redisService;
+
+wss.on('connection', (ws) => {
+  if (wsManager) {
+    wsManager.handleConnection(ws);
   }
 });
 
-// ヘルスチェック
-app.get("/health", (_, res) => res.status(200).send("OK"));
+app.use(errorHandler);
 
-// サーバー起動
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}/`);
-  console.log(`Max players per room: ${process.env.MAX_PLAYERS_PER_ROOM || 6}`);
-});
+const PORT = ENV.PORT;
+
+async function startServer() {
+  try {
+    // 1. Redis接続
+    Logger.info('Connecting to Redis...');
+    redisService = await getRedisService();
+    
+    if (redisService.connected) {
+      Logger.info('Redis connected successfully');
+    } else {
+      Logger.warn('Redis connection failed - running without cache');
+    }
+
+    // 2. イベント購読設定
+    GameEventSubscriber.subscribe();
+    DatabaseSubscriber.subscribe();
+    WebSocketSubscriber.subscribe();
+    Logger.info('Event subscribers initialized');
+
+    // 3. WebSocketマネージャー
+    wsManager = new WebSocketManager(wss);
+    Logger.info('WebSocket manager initialized');
+
+    // 4. サーバー起動
+    server.listen(PORT, () => {
+      Logger.info(`Server started on port ${PORT}`);
+      console.log(`
+╔════════════════════════════════════════╗
+║  机上バーチャルサッカー サーバー起動   ║
+╚════════════════════════════════════════╝
+
+🎮 Server: http://localhost:${PORT}
+⚙️  WebSocket: ws://localhost:${PORT}
+📦 Node Env: ${ENV.NODE_ENV}
+⏱️  Tick: ${CONSTANTS.TICK_INTERVAL}ms
+👥 Max Players: ${CONSTANTS.MAX_PLAYERS_PER_ROOM}
+🔴 Redis: ${redisService.connected ? 'Connected' : 'Disconnected'}
+
+✅ Ready
+      `);
+
+      // 5. ゲームループ開始
+      GameLoopService.start(CONSTANTS.TICK_INTERVAL);
+    });
+
+    // グレースフルシャットダウン
+    process.on('SIGTERM', async () => {
+      Logger.info('SIGTERM received, shutting down...');
+      GameLoopService.stop();
+      await redisService.disconnect();
+      server.close(() => {
+        Logger.info('Server closed');
+        process.exit(0);
+      });
+    });
+
+  } catch (error) {
+    Logger.error('Server startup failed', { message: error.message });
+    process.exit(1);
+  }
+}
+
+startServer();
+
+module.exports = server;
