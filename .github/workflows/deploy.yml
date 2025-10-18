@@ -94,4 +94,4 @@ jobs:
           service: frontend-service # Cloud Runで設定したサービス名
           region: ${{ env.REGION }}
           image: ${{ steps.build-frontend.outputs.image }}
-          # ... Frontendに必要な環境変数
+          # ... 
