@@ -7,25 +7,37 @@ class RoomManager {
     this.waitingRoom = null;
   }
 
-  // 現在の待機中の部屋を取得、なければ新規作成
+  // ランダムマッチ用: 待機中の部屋を取得、なければ新規作成
   getOrCreateWaitingRoom() {
-    // 待機中の部屋が存在し、かつプレイヤー数に余裕があれば使用
     if (this.waitingRoom && this.waitingRoom.getPlayerCount() < this.maxPlayersPerRoom) {
       return this.waitingRoom;
     }
 
-    // 新しい部屋を作成
-    const roomId = "room_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
-    const newRoom = new Room(roomId, this.maxPlayersPerRoom);
+    const roomId = this.generateRoomId();
+    const newRoom = new Room(roomId, this.maxPlayersPerRoom, false); // isPrivate = false
     this.rooms[roomId] = newRoom;
     this.waitingRoom = newRoom;
 
-    console.log(`[RoomManager] New room created: ${roomId} (max: ${this.maxPlayersPerRoom})`);
+    console.log(`[RoomManager] New waiting room created: ${roomId} (max: ${this.maxPlayersPerRoom})`);
 
     return newRoom;
   }
 
-  // プレイヤーを部屋に追加
+  // カスタム部屋を作成
+  createCustomRoom(creatorId, creatorName, maxPlayers = this.maxPlayersPerRoom) {
+    const roomId = this.generateRoomId();
+    const newRoom = new Room(roomId, maxPlayers, true); // isPrivate = true
+    
+    // 作成者をプレイヤーとして追加（team=null）
+    const player = newRoom.addPlayer(creatorId, creatorName, null);
+    this.rooms[roomId] = newRoom;
+
+    console.log(`[RoomManager] Custom room created: ${roomId} (creator: ${creatorId}, max: ${maxPlayers})`);
+
+    return newRoom;
+  }
+
+  // プレイヤーを部屋に追加（ランダムマッチ用）
   addPlayerToRoom(playerId, playerName, team) {
     const room = this.getOrCreateWaitingRoom();
     const player = room.addPlayer(playerId, playerName, team);
@@ -34,6 +46,28 @@ class RoomManager {
     console.log(`[RoomManager] Player ${playerId} joined room ${room.roomId} (${playerCount}/${this.maxPlayersPerRoom})`);
 
     return { room, player };
+  }
+
+  // プレイヤーをカスタム部屋に追加
+  addPlayerToCustomRoom(playerId, playerName, roomId) {
+    const room = this.rooms[roomId];
+    
+    if (!room) {
+      return { success: false, error: "Room not found" };
+    }
+    if (room.isFull()) {
+      return { success: false, error: "Room is full" };
+    }
+    if (room.state !== "waiting") {
+      return { success: false, error: "Game has already started" };
+    }
+
+    const player = room.addPlayer(playerId, playerName, null); // team=null
+    const playerCount = room.getPlayerCount();
+
+    console.log(`[RoomManager] Player ${playerId} joined custom room ${roomId} (${playerCount}/${room.maxPlayers})`);
+
+    return { success: true, room, player };
   }
 
   // プレイヤーを部屋から削除
@@ -74,13 +108,9 @@ class RoomManager {
     return this.rooms[roomId];
   }
 
-  // 部屋がゲーム開始条件を満たしているか
-  canStartGame(roomId) {
-    const room = this.rooms[roomId];
-    if (!room) return false;
-    
-    // 最大人数に達したか、または待機時間が一定以上か
-    return room.getPlayerCount() === this.maxPlayersPerRoom;
+  // ルーム ID が存在するか確認
+  roomExists(roomId) {
+    return this.rooms[roomId] !== undefined;
   }
 
   // ゲーム開始時にチームをランダムに割り当て
@@ -91,10 +121,8 @@ class RoomManager {
     const players = Object.values(room.players);
     const teams = ["alpha", "bravo"];
     
-    // シャッフル
     players.sort(() => Math.random() - 0.5);
 
-    // チームを交互に割り当て
     players.forEach((player, index) => {
       player.team = teams[index % teams.length];
     });
@@ -116,26 +144,50 @@ class RoomManager {
       stats.roomDetails[roomId] = {
         playerCount: count,
         state: this.rooms[roomId].state,
-        maxPlayers: this.maxPlayersPerRoom
+        maxPlayers: this.rooms[roomId].maxPlayers,
+        isPrivate: this.rooms[roomId].isPrivate
       };
     }
 
     return stats;
   }
 
-  // 最大プレイヤー数を変更（ゲーム開始していない場合のみ）
+  // 最大プレイヤー数を変更
   setMaxPlayersPerRoom(max) {
     if (Object.keys(this.rooms).some(id => this.rooms[id].state === "playing")) {
       console.warn("[RoomManager] Cannot change max players while games are running");
       return false;
     }
     this.maxPlayersPerRoom = max;
-    // 既存の待機中ルームへも反映
     if (this.waitingRoom && this.waitingRoom.state !== "playing") {
       this.waitingRoom.maxPlayers = max;
     }
     console.log(`[RoomManager] Max players per room set to ${max}`);
     return true;
+  }
+
+  // ルームID生成ユーティリティ
+  generateRoomId() {
+    return "room_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+  }
+
+  // 部屋情報を取得（プレイヤー情報なし）
+  getRoomInfo(roomId) {
+    const room = this.rooms[roomId];
+    if (!room) return null;
+
+    return {
+      roomId: room.roomId,
+      state: room.state,
+      playerCount: room.getPlayerCount(),
+      maxPlayers: room.maxPlayers,
+      isPrivate: room.isPrivate,
+      players: Object.values(room.players).map(p => ({
+        id: p.id,
+        name: p.name,
+        team: p.team
+      }))
+    };
   }
 }
 
