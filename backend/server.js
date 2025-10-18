@@ -1,9 +1,17 @@
-require('dotenv').config();
-const express = require('express');
-const http = require('http');
-const WebSocket = require('ws');
-const path = require('path');
-const cors = require('cors');
+require("dotenv").config();
+// Boot log for Cloud Run startup troubleshooting
+console.log("[BOOT] Starting backend...", {
+  NODE_ENV: process.env.NODE_ENV,
+  PORT: process.env.PORT,
+  HOST: process.env.HOST,
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("[FATAL] Unhandled Rejection:", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("[FATAL] Uncaught Exception:", err);
+});
 
 const ENV = require('./config/environment');
 const CONSTANTS = require('./config/constants');
@@ -74,107 +82,37 @@ app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// REST ルート
-app.use('/api/players', playerRoutes);
-app.use('/api/matches', matchRoutes);
-app.use('/api/stats', statsRoutes);
+// WebSocket
+syncService(wss);
+
+// 統計情報エンドポイント
+app.get("/api/stats", (_, res) => {
+  const stats = syncService.getRoomStats();
+  res.json(stats);
+});
+
+// マッチング設定エンドポイント（開発用）
+app.post("/api/config/max-players", (req, res) => {
+  const { maxPlayers } = req.body;
+  if (typeof maxPlayers !== 'number' || maxPlayers < 2) {
+    return res.status(400).json({ error: "maxPlayers must be a number >= 2" });
+  }
+
+  const success = syncService.setMaxPlayersPerRoom(maxPlayers);
+  if (success) {
+    res.json({ success: true, maxPlayers });
+  } else {
+    res.status(400).json({ error: "Cannot change max players while games are running" });
+  }
+});
 
 // ヘルスチェック
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
-// エラーハンドラ（最後に）
-app.use(errorHandler);
-
-let wsManager;
-let redisService;
-
-const PORT = ENV.PORT;
-
-// 起動
-async function startServer() {
-  try {
-    // 1) Redis 接続
-    Logger.info('Connecting to Redis...');
-    redisService = await getRedisService();
-    if (redisService.connected) {
-      Logger.info('Redis connected successfully');
-    } else {
-      Logger.warn('Redis connection failed - running without cache');
-    }
-
-    // 2) イベント購読
-    GameEventSubscriber.subscribe();
-    DatabaseSubscriber.subscribe();
-    WebSocketSubscriber.subscribe();
-    Logger.info('Event subscribers initialized');
-
-    // 3) WebSocket マネージャ初期化
-    wsManager = new WebSocketManager(wss);
-    Logger.info('WebSocket manager initialized');
-
-    // 3.5) 接続ハンドラ（初期化後に登録）+ Origin チェック
-    wss.on('connection', (ws, req) => {
-      try {
-        const origin = req?.headers?.origin;
-        if (hasStar && !isProd) {
-          // dev "*" は WS も許可
-        } else if (!isAllowedOrigin(origin)) {
-          Logger.warn('WS blocked origin', { origin });
-          try { ws.close(1008, 'Origin not allowed'); } catch (_) {}
-          return;
-        }
-        wsManager.handleConnection(ws);
-      } catch (err) {
-        Logger.error('WS connection handler error', { message: err.message });
-        try { ws.close(1011, 'Internal error'); } catch (_) {}
-      }
-    });
-    wss.on('error', (err) => {
-      Logger.error('WebSocket server error', { message: err.message });
-    });
-
-    // 4) HTTP サーバ起動
-    server.listen(PORT, () => {
-      Logger.info(`Server started on port ${PORT}`);
-      console.log(`
-╔════════════════════════════════════════╗
-║  机上バーチャルサッカー サーバー起動   ║
-╚════════════════════════════════════════╝
-
-🎮 Server: http://localhost:${PORT}
-⚙️  WebSocket: ws://localhost:${PORT}
-📦 Node Env: ${ENV.NODE_ENV}
-⏱️  Tick: ${CONSTANTS.TICK_INTERVAL}ms
-👥 Max Players: ${CONSTANTS.MAX_PLAYERS_PER_ROOM}
-🔴 Redis: ${redisService.connected ? 'Connected' : 'Disconnected'}
-
-✅ Ready
-      `);
-
-      // 5) ゲームループ開始
-      GameLoopService.start(CONSTANTS.TICK_INTERVAL);
-    });
-
-    // グレースフルシャットダウン
-    const shutdown = async (signal) => {
-      Logger.info(`${signal} received, shutting down...`);
-      try { GameLoopService.stop(); } catch (_) {}
-      try { await redisService.disconnect(); } catch (_) {}
-      try { wss.close(() => Logger.info('WebSocket server closed')); } catch (_) {}
-      server.close(() => {
-        Logger.info('Server closed');
-        process.exit(0);
-      });
-    };
-    process.on('SIGTERM', () => shutdown('SIGTERM'));
-    process.on('SIGINT', () => shutdown('SIGINT'));
-
-  } catch (error) {
-    Logger.error('Server startup failed', { message: error.message });
-    process.exit(1);
-  }
-}
-
-startServer();
-
-module.exports = server;
+// サーバー起動（Cloud RunはPORT=8080、0.0.0.0での待受けが必要）
+const PORT = parseInt(process.env.PORT, 10) || 8080;
+const HOST = process.env.HOST || "0.0.0.0";
+server.listen(PORT, HOST, () => {
+  console.log(`Server running on http://${HOST}:${PORT}/`);
+  console.log(`Max players per room: ${process.env.MAX_PLAYERS_PER_ROOM || 6}`);
+});

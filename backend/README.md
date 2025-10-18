@@ -35,8 +35,8 @@ backend/
   services/
     room.js              # ルームのゲームロジック（シングルトン）
     syncService.js       # WebSocket イベント処理と tick 配信
-    dbService.js         # PostgreSQL 連携の枠（未実装）
-    RedisService.js      # Redis 同期の枠（未実装）
+  dbService.js         # DBモジュールへの薄いラッパ（os2514-db を優先、相対はフォールバック）
+    redisService.js      # Redis 同期の枠（未実装）
 ```
 
 ## 前提条件
@@ -63,6 +63,22 @@ npm ci   # lockfile があるため推奨（無い場合は npm install）
 # サーバー起動
 npm start
 # -> http://localhost:3000 で待受（/health, /api/*, WebSocket）
+
+### データベース初期化（移設済）
+
+DB関連は `db/` に移設しました。以下のいずれかで初期化できます（ワークスペース解決を推奨）。
+
+```bash
+# backend スクリプト（互換）
+npm run db:init
+
+# ワークスペースから直接実行（推奨）
+node -e "require('os2514-db/initDb')"
+
+# psql で適用（スキーマはパッケージから解決）
+npm run db:setup
+```
+
 ```
 
 停止はターミナルで Ctrl + C。

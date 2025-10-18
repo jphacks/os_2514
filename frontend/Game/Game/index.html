@@ -1,20 +1,87 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>机上バーチャルサッカー (リファクタリング完了版)</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #111; }
-        canvas { display: block; }
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #111;
+        }
+
+        canvas {
+            display: block;
+        }
+
         /* UIManagerが管理するUI要素のスタイルはここに含めておきます */
-        #joystick-container { position: absolute; bottom: 30px; left: 30px; width: 150px; height: 150px; background-color: rgba(128, 128, 128, 0.4); border-radius: 50%; pointer-events: all; user-select: none; }
-        #joystick-thumb { position: absolute; top: 50%; left: 50%; width: 70px; height: 70px; background-color: rgba(255, 255, 255, 0.6); border-radius: 50%; transform: translate(-50%, -50%); }
-        #debug-monitor { position: absolute; top: 20px; left: 20px; background-color: rgba(0, 0, 0, 0.6); padding: 10px; border-radius: 5px; color: white; font-family: monospace; pointer-events: all; font-size: 12px; width: 200px; }
-        #debug-monitor h3 { margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #555; padding-bottom: 5px; cursor: pointer; }
-        #debug-monitor p { margin: 5px 0; }
-        #debug-monitor button { pointer-events: all; cursor: pointer; margin-top: 10px; width: 100%; padding: 5px; background-color: #333; color: white; border: 1px solid #555; }
-        #debug-monitor.collapsed { height: 30px; overflow: hidden; }
+        #joystick-container {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            width: 150px;
+            height: 150px;
+            background-color: rgba(128, 128, 128, 0.4);
+            border-radius: 50%;
+            pointer-events: all;
+            user-select: none;
+        }
+
+        #joystick-thumb {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 70px;
+            height: 70px;
+            background-color: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        #debug-monitor {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 10px;
+            border-radius: 5px;
+            color: white;
+            font-family: monospace;
+            pointer-events: all;
+            font-size: 12px;
+            width: 200px;
+        }
+
+        #debug-monitor h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #555;
+            padding-bottom: 5px;
+            cursor: pointer;
+        }
+
+        #debug-monitor p {
+            margin: 5px 0;
+        }
+
+        #debug-monitor button {
+            pointer-events: all;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+            padding: 5px;
+            background-color: #333;
+            color: white;
+            border: 1px solid #555;
+        }
+
+        #debug-monitor.collapsed {
+            height: 30px;
+            overflow: hidden;
+        }
+
         /* 他のUIスタイル（スコアボードなど）もここに追加 */
         #finger-tracking-pane {
             position: absolute;
@@ -110,9 +177,11 @@
         }
     </style>
 </head>
+
 <body>
     <div id="ui-container">
-        <div id="scoreboard" style="display:none; position: absolute; top: 20px; left: 50%; transform: translateX(-50%); color: white; font-size: 2em;">
+        <div id="scoreboard"
+            style="display:none; position: absolute; top: 20px; left: 50%; transform: translateX(-50%); color: white; font-size: 2em;">
             <span id="score-alpha">0</span> - <span id="timer">5:00</span> - <span id="score-bravo">0</span>
         </div>
     </div>
@@ -145,6 +214,7 @@
         }
     }
     </script>
-    <script type="module" src="main.js"></script>
+    <script type="module" src="Main.js"></script>
 </body>
+
 </html>

@@ -7,17 +7,18 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "db:init": "node scripts/initDb.js",
-    "db:setup": "psql -U postgres -d soccer_game -f schema.sql"
+    "db:init:new": "node -e \"require('os2514-db/initDb')\"",
+    "db:setup": "node scripts/psqlSchema.js"
   },
   "dependencies": {
+    "os2514-db": "file:../db",
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
     "express": "^4.21.2",
-    "ioredis": "^5.8.1",
-    "pg": "^8.16.3",
-    "redis": "^5.8.3",
-    "ws": "^8.18.3"
+    "redis": "^4.6.13",
+    "ws": "^8.18.3",
+    "dotenv": "^16.4.5",
+    "pg": "^8.13.1"
   },
   "keywords": [],
   "author": "",

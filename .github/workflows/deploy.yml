@@ -1,0 +1,101 @@
+name: Deploy to Google Cloud Run
+
+on:
+  push:
+    # mainブランチへのプッシュまたはマージで実行
+    branches:
+      - main
+
+# GitHub Actionsの環境変数（GCP Secretsで設定したものを使用）
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: ${{ secrets.GCP_REGION }}
+  SERVICE_ACCOUNT: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+  WIF_PROVIDER_ID: ${{ secrets.WIF_PROVIDER_ID }}
+  ARTIFACT_REGISTRY_REPO: app-registry  # Artifact Registry のリポジトリ名を指定
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    # Workload Identity 認証ステップ
+    permissions:
+      contents: 'read'
+      id-token: 'write' # OIDCトークンを取得するために必要
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # ----------------------------------------------------
+      # 1. GCP 認証 (Workload Identity 連携)
+      # ----------------------------------------------------
+      - name: 'Authenticate to Google Cloud'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          # Workload Identity Pool のプロバイダIDを指定
+          workload_identity_provider: ${{ env.WIF_PROVIDER_ID }}
+          # デプロイ用サービスアカウントを指定
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+
+          # 🚨🚨🚨 認証エラー解消のための明示的な audience 指定 🚨🚨🚨
+          # GCP プロバイダ設定のオーディエンスと一致させる必要がある
+          audience: 'https://github.com/jphacks/os_2514' # <--- ここを修正
+
+      # ----------------------------------------------------
+      # 2. Artifact Registry への Docker 認証
+      # ----------------------------------------------------
+      - name: 'Set up Artifact Registry'
+        uses: 'google-github-actions/setup-gcloud@v2'
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          # Docker認証をArtifact Registryに対して行う
+          #setup: false # gcloudのインストールのみ
+      
+      - name: 'Configure Docker to use Artifact Registry'
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+      # ----------------------------------------------------
+      # 3. Backend Service のビルドとデプロイ
+      # ----------------------------------------------------
+      - name: Build and Push Backend Image
+        id: build-backend
+        env:
+          IMAGE: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/backend:${{ github.sha }}
+        run: |
+          # Dockerfileがあるディレクトリに移動してビルド
+          docker build -t $IMAGE ./backend # Dockerfileが './backend' ディレクトリにある前提
+          docker push $IMAGE
+        
+      - name: Deploy Backend Service to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: backend-service # Cloud Runで設定したサービス名
+          region: ${{ env.REGION }}
+          image: ${{ steps.build-backend.outputs.image }}
+          # Cloud SQL接続情報 (VPC Connector設定済み前提)
+          env_vars: |
+            DB_HOST=${{ secrets.DB_HOST }}
+            DB_USER=${{ secrets.DB_USER }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD_SECRET }} # GitHub Secretsで管理
+            # ... 他の環境変数
+          
+      # ----------------------------------------------------
+      # 4. Frontend Service のビルドとデプロイ
+      # ----------------------------------------------------
+      - name: Build and Push Frontend Image
+        id: build-frontend
+        env:
+          IMAGE: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/frontend:${{ github.sha }}
+        run: |
+          # Dockerfileがあるディレクトリに移動してビルド
+          docker build -t $IMAGE ./frontend # Dockerfileが './frontend' ディレクトリにある前提
+          docker push $IMAGE
+
+      - name: Deploy Frontend Service to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: frontend-service # Cloud Runで設定したサービス名
+          region: ${{ env.REGION }}
+          image: ${{ steps.build-frontend.outputs.image }}
+          # ... 
