@@ -1,6 +1,17 @@
-FROM nginx:alpine
-ENV PORT=3000
-WORKDIR /usr/share/nginx/html
-COPY . .
+FROM node:20-alpine
+
+WORKDIR /app/backend
+
+# DB module をコピー (backend の依存関係として必要)
+COPY db /app/db
+
+# package.json をコピーして依存関係をインストール
+COPY backend/package*.json ./
+RUN npm install --omit=dev
+
+# アプリケーションのソースをコピー
+COPY backend/ ./
+
 EXPOSE 3000
-CMD sh -c "sed -i 's/listen\s\+80;/listen ${PORT};/; s/listen\s\+\[::\]:80;/listen [::]:${PORT};/' /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
+
+CMD ["node", "server.js"]
