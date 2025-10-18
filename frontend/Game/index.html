@@ -1,16 +1,631 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <title>Redirecting...</title>
-  <script>
-    window.location.replace('Game/index.html');
-  </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>机上バーチャルサッカー</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: Arial, sans-serif;
+            height: 100vh;
+        }
+
+        #title-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        #title-screen.hidden {
+            display: none;
+        }
+
+        .title-content {
+            text-align: center;
+        }
+
+        .title-canvas {
+            width: 400px;
+            height: 300px;
+            margin-bottom: 30px;
+            filter: drop-shadow(0 8px 16px rgba(0,0,0,0.3));
+            border-radius: 8px;
+            background: white;
+        }
+
+        .title-text {
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .title-subtitle {
+            color: rgba(255,255,255,0.9);
+            font-size: 18px;
+            margin-bottom: 40px;
+        }
+
+        .title-button {
+            padding: 12px 40px;
+            margin: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .title-button-play {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .title-button-play:hover {
+            background-color: #45a049;
+            transform: scale(1.05);
+        }
+
+        .title-button-help {
+            background-color: #2196F3;
+            color: white;
+        }
+
+        .title-button-help:hover {
+            background-color: #0b7dda;
+            transform: scale(1.05);
+        }
+
+        /* モーダル */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal h2 {
+            margin-top: 0;
+            color: #333;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-direction: column;
+        }
+
+        .modal-button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+
+        .modal-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .modal-button-primary {
+            background-color: #667eea;
+            color: white;
+        }
+
+        .modal-button-primary:hover:not(:disabled) {
+            background-color: #5568d3;
+        }
+
+        .modal-button-secondary {
+            background-color: #e0e0e0;
+            color: #333;
+        }
+
+        .modal-button-secondary:hover:not(:disabled) {
+            background-color: #d0d0d0;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        .modal-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        /* マッチング画面 */
+        #matching-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            flex-direction: column;
+        }
+
+        #matching-screen.active {
+            display: flex;
+        }
+
+        .matching-content {
+            text-align: center;
+            color: white;
+        }
+
+        .matching-title {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 40px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .matching-spinner {
+            width: 80px;
+            height: 80px;
+            margin: 30px auto;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .matching-info {
+            font-size: 18px;
+            margin: 20px 0;
+            opacity: 0.9;
+        }
+
+        .matching-cancel-button {
+            margin-top: 40px;
+            padding: 12px 30px;
+            background-color: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+
+        .matching-cancel-button:hover {
+            background-color: rgba(255,255,255,0.3);
+        }
+
+        .player-name-section {
+            margin: 15px 0;
+            text-align: left;
+        }
+
+        .player-name-section label {
+            display: block;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
-  <noscript>
-    <meta http-equiv="refresh" content="0;url=Game/index.html">
-    <p>自動的に <a href="Game/index.html">Game/index.html</a> へ移動します。</p>
-  </noscript>
+    <!-- タイトル画面 -->
+    <div id="title-screen" class="active">
+        <div class="title-content">
+            <canvas id="title-canvas" class="title-canvas"></canvas>
+            <div class="title-text">机上バーチャルサッカー</div>
+            <div class="title-subtitle">スマホと片手でサッカー対戦！</div>
+            <button class="title-button title-button-play" id="btn-play">遊ぶ</button>
+            <button class="title-button title-button-help" id="btn-help">遊び方</button>
+        </div>
+    </div>
+
+    <!-- プレイヤー名入力モーダル -->
+    <div id="name-modal" class="modal">
+        <div class="modal-content">
+            <h2>プレイヤー名入力</h2>
+            <div class="player-name-section">
+                <label for="player-name-input">プレイヤー名:</label>
+                <input type="text" id="player-name-input" class="modal-input" placeholder="例: プレイヤー1" maxlength="20">
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-button modal-button-primary" id="btn-name-confirm">確認</button>
+                <button class="modal-button modal-button-secondary" id="btn-name-cancel">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- メニュー選択モーダル -->
+    <div id="menu-modal" class="modal">
+        <div class="modal-content">
+            <h2>ゲームモード</h2>
+            <p style="text-align: center; color: #666; margin: 10px 0;">遊び方を選択してください</p>
+            <div class="modal-buttons">
+                <button class="modal-button modal-button-primary" id="btn-random-match">ランダムマッチ</button>
+                <button class="modal-button modal-button-primary" id="btn-room-select">ルーム参加</button>
+                <button class="modal-button modal-button-secondary" id="btn-menu-close">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ルーム選択モーダル -->
+    <div id="room-modal" class="modal">
+        <div class="modal-content">
+            <h2>ルーム選択</h2>
+            <div class="modal-buttons">
+                <button class="modal-button modal-button-primary" id="btn-create-room">ルームを作成</button>
+                <button class="modal-button modal-button-primary" id="btn-join-room">ルームに参加</button>
+                <button class="modal-button modal-button-secondary" id="btn-room-close">戻る</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ルーム参加モーダル -->
+    <div id="join-room-modal" class="modal">
+        <div class="modal-content">
+            <h2>ルームに参加</h2>
+            <p style="color: #666; margin: 10px 0;">ルームIDを入力してください</p>
+            <input type="text" id="room-id-input" class="modal-input" placeholder="例: ABC123XYZ" maxlength="10">
+            <div class="modal-buttons">
+                <button class="modal-button modal-button-primary" id="btn-confirm-join">参加</button>
+                <button class="modal-button modal-button-secondary" id="btn-join-cancel">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 遊び方モーダル -->
+    <div id="help-modal" class="modal">
+        <div class="modal-content">
+            <h2>遊び方</h2>
+            <div style="text-align: left; color: #666; max-height: 400px; overflow-y: auto;">
+                <h3>基本操作</h3>
+                <p><strong>走る：</strong> 2本の指を前後に動かします</p>
+                <p><strong>シュート：</strong> 一方の指を軸に固定し、もう一方を後ろに曲げてから弾きます</p>
+                
+                <h3>ゲームルール</h3>
+                <p>• 3対3のチーム戦</p>
+                <p>• 制限時間内により多くゴールを決めたチームが勝ち</p>
+                <p>• ボール保持者に敵が接触するとボール奪取</p>
+                
+                <h3>反則</h3>
+                <p>• 3本目の指が映ると反則</p>
+                <p>• 第2関節より下の指が映るとハンド反則</p>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-button modal-button-secondary" id="btn-help-close">閉じる</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- マッチング画面 -->
+    <div id="matching-screen">
+        <div class="matching-content">
+            <div class="matching-title">マッチング中</div>
+            <div class="matching-spinner"></div>
+            <div class="matching-info" id="matching-info">マッチングしています...</div>
+            <button class="matching-cancel-button" id="btn-matching-cancel">キャンセル</button>
+        </div>
+    </div>
+
+    <script>
+        // タイトルアート描画
+        function drawTitleArt() {
+            const canvas = document.getElementById('title-canvas');
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#9C27B0';
+            ctx.beginPath();
+            ctx.arc(200, 180, 40, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#FF6B6B';
+            ctx.fillRect(80, 100, 70, 100);
+            ctx.fillStyle = '#FFD4D4';
+            ctx.beginPath();
+            ctx.arc(115, 80, 25, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#4A90E2';
+            ctx.fillRect(250, 100, 70, 100);
+            ctx.fillStyle = '#D4E5FF';
+            ctx.beginPath();
+            ctx.arc(285, 80, 25, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(20, 140, 40, 60);
+            ctx.strokeRect(340, 140, 40, 60);
+
+            ctx.fillStyle = '#667eea';
+            ctx.font = 'bold 20px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('vs', 200, 250);
+        }
+
+        // モーダル操作関数
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function closeAllModals() {
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.classList.remove('active');
+            });
+        }
+
+        // イベントリスナー設定
+        document.getElementById('btn-play').addEventListener('click', () => {
+            openModal('name-modal');
+        });
+
+        document.getElementById('btn-help').addEventListener('click', () => {
+            openModal('help-modal');
+        });
+
+        document.getElementById('btn-name-confirm').addEventListener('click', () => {
+            const name = document.getElementById('player-name-input').value.trim();
+            if (!name) {
+                alert('プレイヤー名を入力してください');
+                return;
+            }
+            closeAllModals();
+            openModal('menu-modal');
+        });
+
+        document.getElementById('btn-name-cancel').addEventListener('click', () => {
+            document.getElementById('player-name-input').value = '';
+            closeAllModals();
+        });
+
+        document.getElementById('btn-random-match').addEventListener('click', () => {
+            const playerName = document.getElementById('player-name-input').value;
+            startMatching('ランダムマッチング中', 'マッチングしています...', 'random', playerName);
+        });
+
+        document.getElementById('btn-room-select').addEventListener('click', () => {
+            closeAllModals();
+            openModal('room-modal');
+        });
+
+        document.getElementById('btn-menu-close').addEventListener('click', () => {
+            closeAllModals();
+        });
+
+        document.getElementById('btn-create-room').addEventListener('click', () => {
+            const playerName = document.getElementById('player-name-input').value;
+            startMatching('ルーム作成中', 'ルームを作成しています...', 'create', playerName);
+        });
+
+        document.getElementById('btn-join-room').addEventListener('click', () => {
+            closeAllModals();
+            openModal('join-room-modal');
+        });
+
+        document.getElementById('btn-room-close').addEventListener('click', () => {
+            closeAllModals();
+            openModal('menu-modal');
+        });
+
+        document.getElementById('btn-confirm-join').addEventListener('click', () => {
+            const roomId = document.getElementById('room-id-input').value.trim();
+            if (!roomId) {
+                alert('ルームIDを入力してください');
+                return;
+            }
+            const playerName = document.getElementById('player-name-input').value;
+            startMatching('ルーム参加中', `ルーム ${roomId} に参加しています...`, 'join', playerName);
+        });
+
+        document.getElementById('btn-join-cancel').addEventListener('click', () => {
+            document.getElementById('room-id-input').value = '';
+            closeAllModals();
+            openModal('room-modal');
+        });
+
+        document.getElementById('btn-help-close').addEventListener('click', () => {
+            closeAllModals();
+        });
+
+        document.getElementById('btn-matching-cancel').addEventListener('click', () => {
+            cancelMatching();
+        });
+
+        // WebSocket 接続
+        let ws = null;
+
+        function connectWebSocket(playerName, mode) {
+            const wsUrl = 'ws://localhost:8080';
+            
+            try {
+                ws = new WebSocket(wsUrl);
+
+                ws.onopen = () => {
+                    console.log('[WS] Connected');
+                    
+                    // モードに応じてメッセージ送信
+                    if (mode === 'random') {
+                        ws.send(JSON.stringify({
+                            type: 'join',
+                            payload: { name: playerName }
+                        }));
+                    } else if (mode === 'create') {
+                        ws.send(JSON.stringify({
+                            type: 'createRoom',
+                            payload: { name: playerName }
+                        }));
+                    } else if (mode === 'join') {
+                        const roomId = document.getElementById('room-id-input').value;
+                        ws.send(JSON.stringify({
+                            type: 'joinRoom',
+                            payload: { name: playerName, roomId: roomId }
+                        }));
+                    }
+                };
+
+                ws.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        handleWebSocketMessage(data);
+                    } catch (err) {
+                        console.error('Parse error:', err);
+                    }
+                };
+
+                ws.onerror = (error) => {
+                    console.error('[WS] Error:', error);
+                    alert('サーバーに接続できません');
+                    cancelMatching();
+                };
+
+                ws.onclose = () => {
+                    console.log('[WS] Disconnected');
+                };
+            } catch (error) {
+                console.error('Connection error:', error);
+                alert('接続エラーが発生しました');
+                cancelMatching();
+            }
+        }
+
+        function handleWebSocketMessage(data) {
+            const { type, payload } = data;
+
+            switch (type) {
+                case 'joinAck':
+                    console.log('Joined:', payload);
+                    document.getElementById('matching-info').textContent = '接続しました。相手を待機中...';
+                    break;
+                case 'createRoomAck':
+                    console.log('Room created:', payload);
+                    document.getElementById('matching-info').textContent = 
+                        `ルームコード: ${payload.roomCode}\n相手の参加を待っています...`;
+                    break;
+                case 'joinRoomAck':
+                    console.log('Room joined:', payload);
+                    document.getElementById('matching-info').textContent = 
+                        `ルームに参加しました。ゲーム開始を待機中...`;
+                    break;
+                case 'matchingComplete':
+                    console.log('Matching complete');
+                    document.getElementById('matching-info').textContent = 
+                        `マッチング完了！ゲーム開始まで待機中...`;
+                    // 3秒後にゲーム画面へ
+                    setTimeout(() => {
+                        if (ws) ws.close();
+                        window.location.href = '/Game/game/index.html';
+                    }, 3000);
+                    break;
+                case 'error':
+                    console.error('Server error:', payload);
+                    alert(`エラー: ${payload.message}`);
+                    cancelMatching();
+                    break;
+                default:
+                    console.warn('Unknown message:', type);
+            }
+        }
+
+        function cancelMatching() {
+            if (ws) {
+                ws.send(JSON.stringify({ type: 'leave', payload: {} }));
+                ws.close();
+                ws = null;
+            }
+            document.getElementById('matching-screen').classList.remove('active');
+            document.getElementById('title-screen').classList.remove('hidden');
+        }
+
+        // マッチング開始
+        function startMatching(title, info, mode, playerName) {
+            closeAllModals();
+            document.getElementById('title-screen').classList.add('hidden');
+            document.getElementById('matching-title').textContent = title;
+            document.getElementById('matching-info').textContent = info;
+            document.getElementById('matching-screen').classList.add('active');
+
+            // バックエンド接続
+            connectWebSocket(playerName, mode);
+        }
+
+        // 初期化
+        window.addEventListener('load', () => {
+            drawTitleArt();
+        });
+    </script>
 </body>
 </html>
