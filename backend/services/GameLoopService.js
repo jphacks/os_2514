@@ -12,6 +12,7 @@ class GameLoopService {
   }
 
   unregisterRoom(roomId) {
+    console.log(`[GameLoop] Unregistering room ${roomId}`);
     this.rooms.delete(roomId);
   }
 
