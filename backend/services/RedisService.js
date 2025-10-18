@@ -6,228 +6,190 @@ class RedisService {
   constructor() {
     this.client = null;
     this.connected = false;
-    this.prefix = 'player:';
-    this.ttl = 600; // 10分
+    this.prefix = 'player:'; // キー: player:{roomId}:{playerId}
+    this.ttlSeconds = 600;
   }
 
-  /**
-   * Redis接続
-   */
   async connect() {
-    try {
-      Logger.info('Connecting to Redis...');
+    if (this.connected && this.client) return;
 
-      this.client = redis.createClient({
-        host: ENV.REDIS_HOST,
-        port: ENV.REDIS_PORT,
-        password: ENV.REDIS_PASSWORD || undefined,
-        socket: {
-          reconnectStrategy: (retries) => {
-            if (retries > 10) {
-              Logger.error('Redis: max reconnection retries exceeded');
-              return new Error('Max retries exceeded');
-            }
-            return Math.min(retries * 50, 500);
+    const hasUrl = !!ENV.REDIS_URL;
+    const host = ENV.REDIS_HOST || '127.0.0.1';
+    const port = Number(ENV.REDIS_PORT || 6379);
+    const useTls = String(ENV.REDIS_TLS || '').toLowerCase() === 'true';
+    const scheme = useTls ? 'rediss' : 'redis';
+    const url = hasUrl ? ENV.REDIS_URL : `${scheme}://${host}:${port}`;
+
+    // v4: url か socket.host/socket.port のどちらかを使用
+    const base = hasUrl
+      ? { url }
+      : {
+          socket: {
+            host,
+            port,
+            reconnectStrategy: (retries) => Math.min(100 + retries * 50, 1000),
           },
-        },
-      });
+        };
 
-      // エラーハンドリング
-      this.client.on('error', (err) => {
-        Logger.error('Redis error', { message: err.message });
-        this.connected = false;
-      });
+    this.client = require('redis').createClient({
+      ...base,
+      password: ENV.REDIS_PASSWORD || undefined,
+      // url 指定の場合も socket オプションは使えるので再接続戦略は付けておく
+      socket: {
+        ...(base.socket || {}),
+        reconnectStrategy: (retries) => Math.min(100 + retries * 50, 1000),
+      },
+    });
 
-      this.client.on('connect', () => {
-        Logger.info('Redis: socket connected');
-        this.connected = true;
-      });
-
-      this.client.on('ready', () => {
-        Logger.info('Redis: ready');
-      });
-
-      this.client.on('reconnecting', () => {
-        Logger.warn('Redis: reconnecting...');
-      });
-
-      // 接続実行
-      await this.client.connect();
-      this.connected = true;
-      Logger.info('Redis connected successfully');
-
-      return true;
-    } catch (error) {
-      Logger.error('Redis connection failed', { message: error.message });
+    this.client.on('error', (err) => {
       this.connected = false;
-      return false;
-    }
+      Logger.error('Redis error', { message: err.message });
+    });
+    this.client.on('ready', () => {
+      this.connected = true;
+      Logger.info('Redis ready');
+    });
+
+    await this.client.connect();
+    this.connected = true;
   }
 
-  /**
-   * プレイヤー位置を保存
-   */
-  async setPlayerPosition(playerId, x, z, direction, state) {
-    if (!this.connected || !this.client) {
-      Logger.warn('Redis: not connected, skipping setPlayerPosition');
-      return;
-    }
+  isAvailable() {
+    return this.connected && !!this.client;
+  }
 
+  // ルームスコープキー
+  _key(roomId, playerId) {
+    const r = roomId || 'global';
+    return `${this.prefix}${r}:${playerId}`;
+  }
+
+  async setPlayerPosition(playerId, x, z, direction, state, roomId) {
+    if (!this.isAvailable()) return;
     try {
-      const key = `${this.prefix}${playerId}`;
+      const key = this._key(roomId, playerId);
       const data = JSON.stringify({ x, z, direction, state });
-      await this.client.setEx(key, this.ttl, data);
-    } catch (error) {
-      Logger.error('Redis setPlayerPosition error', { playerId, message: error.message });
+      await this.client.setEx(key, this.ttlSeconds, data);
+    } catch (err) {
+      Logger.error('Redis setPlayerPosition error', {
+        playerId,
+        roomId,
+        message: err.message,
+      });
     }
   }
 
-  /**
-   * 全プレイヤーの位置を取得
-   */
-  async getAllPositions() {
-    if (!this.connected || !this.client) {
-      Logger.warn('Redis: not connected, returning empty positions');
-      return {};
-    }
-
+  async getPlayerPosition(playerId, roomId) {
+    if (!this.isAvailable()) return null;
     try {
-      const keys = await this.client.keys(`${this.prefix}*`);
+      const key = this._key(roomId, playerId);
+      const data = await this.client.get(key);
+      return data ? JSON.parse(data) : null;
+    } catch (err) {
+      Logger.error('Redis getPlayerPosition error', {
+        playerId,
+        roomId,
+        message: err.message,
+      });
+      return null;
+    }
+  }
 
-      if (!keys || keys.length === 0) {
-        return {};
-      }
+  async deletePlayerPosition(playerId, roomId) {
+    if (!this.isAvailable()) return;
+    try {
+      const key = this._key(roomId, playerId);
+      await this.client.del(key);
+    } catch (err) {
+      Logger.error('Redis deletePlayerPosition error', {
+        playerId,
+        roomId,
+        message: err.message,
+      });
+    }
+  }
 
-      const result = {};
-
-      for (const key of keys) {
-        const playerId = key.replace(this.prefix, '');
-        const data = await this.client.get(key);
-
-        if (data) {
-          try {
-            result[playerId] = JSON.parse(data);
-          } catch (parseError) {
-            Logger.error('Redis: failed to parse data', {
-              playerId,
-              message: parseError.message,
-            });
-          }
+  // ルーム単位クリア（SCAN + バッチDEL）
+  async clearRoom(roomId) {
+    if (!this.isAvailable()) return;
+    const pattern = `${this.prefix}${roomId || 'global'}:*`;
+    let batch = [];
+    let total = 0;
+    try {
+      for await (const key of this.client.scanIterator({
+        MATCH: pattern,
+        COUNT: 200,
+      })) {
+        batch.push(key);
+        if (batch.length >= 500) {
+          await this.client.del(batch);
+          total += batch.length;
+          batch = [];
         }
       }
-
-      return result;
-    } catch (error) {
-      Logger.error('Redis getAllPositions error', { message: error.message });
-      return {};
-    }
-  }
-
-  /**
-   * 特定プレイヤーの位置を取得
-   */
-  async getPlayerPosition(playerId) {
-    if (!this.connected || !this.client) {
-      return null;
-    }
-
-    try {
-      const key = `${this.prefix}${playerId}`;
-      const data = await this.client.get(key);
-
-      if (!data) {
-        return null;
+      if (batch.length) {
+        await this.client.del(batch);
+        total += batch.length;
       }
-
-      return JSON.parse(data);
-    } catch (error) {
-      Logger.error('Redis getPlayerPosition error', { playerId, message: error.message });
-      return null;
+      if (total) {
+        Logger.info('Redis room cleared', { roomId, keysCleared: total });
+      }
+    } catch (err) {
+      Logger.error('Redis clearRoom error', { roomId, message: err.message });
     }
   }
 
-  /**
-   * プレイヤー位置を削除
-   */
-  async deletePlayerPosition(playerId) {
-    if (!this.connected || !this.client) {
-      return;
-    }
-
-    try {
-      const key = `${this.prefix}${playerId}`;
-      await this.client.del(key);
-    } catch (error) {
-      Logger.error('Redis deletePlayerPosition error', { playerId, message: error.message });
-    }
-  }
-
-  /**
-   * 全プレイヤー位置をクリア
-   */
+  // 全体クリア（本番では原則非推奨）
   async clearAll() {
-    if (!this.connected || !this.client) {
-      Logger.warn('Redis: not connected, skipping clearAll');
-      return;
-    }
-
+    if (!this.isAvailable()) return;
+    let batch = [];
+    let total = 0;
     try {
-      const keys = await this.client.keys(`${this.prefix}*`);
-
-      if (!keys || keys.length === 0) {
-        Logger.debug('Redis: no keys to clear');
-        return;
+      for await (const key of this.client.scanIterator({
+        MATCH: `${this.prefix}*`,
+        COUNT: 500,
+      })) {
+        batch.push(key);
+        if (batch.length >= 500) {
+          await this.client.del(batch);
+          total += batch.length;
+          batch = [];
+        }
       }
-
-      await this.client.del(keys);
-      Logger.info('Redis cleared', { keysCleared: keys.length });
-    } catch (error) {
-      Logger.error('Redis clearAll error', { message: error.message });
+      if (batch.length) {
+        await this.client.del(batch);
+        total += batch.length;
+      }
+      Logger.info('Redis cleared', { keysCleared: total });
+    } catch (err) {
+      Logger.error('Redis clearAll error', { message: err.message });
     }
   }
 
-  /**
-   * Redis切断
-   */
   async disconnect() {
-    if (this.client && this.connected) {
-      try {
-        await this.client.quit();
-        this.connected = false;
-        Logger.info('Redis disconnected');
-      } catch (error) {
-        Logger.error('Redis disconnect error', { message: error.message });
-      }
+    if (!this.client) return;
+    try {
+      await this.client.quit();
+    } catch (err) {
+      Logger.error('Redis disconnect error', { message: err.message });
+    } finally {
+      this.connected = false;
+      this.client = null;
     }
-  }
-
-  /**
-   * 接続状態を取得
-   */
-  isConnected() {
-    return this.connected;
   }
 }
 
-// シングルトン
 let instance = null;
-
-/**
- * RedisService インスタンスを取得
- */
 async function getRedisService() {
   if (!instance) {
     instance = new RedisService();
     try {
       await instance.connect();
-    } catch (error) {
-      Logger.error('Redis service initialization failed', { message: error.message });
+    } catch (err) {
+      Logger.error('Redis connection failed', { message: err.message });
     }
   }
   return instance;
 }
 
-module.exports = {
-  getRedisService,
-  RedisService,
-};
+module.exports = { getRedisService, RedisService };
