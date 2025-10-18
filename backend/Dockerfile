@@ -10,8 +10,6 @@ COPY backend/package*.json ./backend/
 WORKDIR /app/backend
 RUN npm install --omit=dev
 
-# アプリケーションのソースをコピー
-COPY backend/ ./
 
 EXPOSE 3000
 
