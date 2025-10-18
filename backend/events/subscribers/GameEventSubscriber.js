@@ -1,6 +1,6 @@
 const Logger = require('../../utils/Logger');
 const eventEmitter = require('../EventEmitter');
-const EVENTS = require('../events');
+const EVENTS = require('../events/events');
 
 class GameEventSubscriber {
   static subscribe() {

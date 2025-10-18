@@ -14,6 +14,7 @@ class Room {
     this.state = 'waiting'; // 'waiting' | 'matching' | 'playing' | 'finished'
     this.score = { alpha: 0, bravo: 0 };
     this.timeLeft = CONSTANTS.GAME_DURATION;
+    this._lastTickAt = null;
     this.createdAt = Date.now();
   }
 
@@ -96,11 +97,6 @@ class Room {
       if ((p.state === 'kick' || p.state === 'tackle') && now > p.lastActionTime + 100) p.state = 'idle';
     });
 
-    // ボール物理演算
-    if (!this.ball.ownerId && this.ball.isMoving()) {
-      this.ball.updatePosition();
-    }
-
     // ボール自動拾い
     if (!this.ball.ownerId && !this.ball.isMoving()) {
       Object.values(this.players).forEach(p => {
@@ -140,6 +136,8 @@ class Room {
       }
     }
 
+    
+
     // ゴール判定
     const inGoalZone = this.ball.z > CONSTANTS.GOAL_Y1 && this.ball.z < CONSTANTS.GOAL_Y2;
 
@@ -156,11 +154,15 @@ class Room {
       this.resetPositions();
     }
 
-    // 時間経過
-    this.timeLeft = Math.max(0, this.timeLeft - 1);
-    if (this.timeLeft === 0) {
-      this.state = 'finished';
-      eventEmitter.emit(EVENTS.GAME_ENDED, { room: this });
+    const nowMs = Number.isFinite(now) ? now : Date.now();
+    const dt = this._lastTickAt ? (nowMs - this._lastTickAt) / 1000 : 0;
+    this._lastTickAt = nowMs;
+
+    if (this.state === 'playing' && dt > 0) {
+      this.timeLeft = Math.max(0, this.timeLeft - dt);
+      if (this.timeLeft === 0) {
+        this.state = 'finished';
+      }
     }
   }
 
