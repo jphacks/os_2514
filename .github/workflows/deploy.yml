@@ -50,7 +50,7 @@ jobs:
         with:
           project_id: ${{ env.PROJECT_ID }}
           # Docker認証をArtifact Registryに対して行う
-          setup: false # gcloudのインストールのみ
+          #setup: false # gcloudのインストールのみ
       
       - name: 'Configure Docker to use Artifact Registry'
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
