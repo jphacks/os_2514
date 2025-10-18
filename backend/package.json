@@ -1,9 +1,13 @@
 {
-  "name": "threejs-sync-server",
+  "name": "tabletop-virtual-soccer",
   "version": "1.0.0",
+  "description": "Tabletop Virtual Soccer Game Backend",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "db:init": "node scripts/initDb.js",
+    "db:setup": "psql -U postgres -d soccer_game -f schema.sql"
   },
   "dependencies": {
     "body-parser": "^2.2.0",
