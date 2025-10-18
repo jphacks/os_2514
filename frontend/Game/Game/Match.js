@@ -83,11 +83,11 @@ export default class Match {
     ground.receiveShadow = true;
     this.scene.add(ground);
 
-    const alphaGoalMesh = this.createGoalMesh();
+    const alphaGoalMesh = this.createGoalMesh('alpha');
     alphaGoalMesh.position.set(0, 0, -C.FIELD_HEIGHT / 2);
     this.scene.add(alphaGoalMesh);
 
-    const bravoGoalMesh = this.createGoalMesh();
+    const bravoGoalMesh = this.createGoalMesh('bravo');
     bravoGoalMesh.position.set(0, 0, C.FIELD_HEIGHT / 2);
     bravoGoalMesh.rotation.y = Math.PI;
     this.scene.add(bravoGoalMesh);
@@ -96,13 +96,14 @@ export default class Match {
   /**
    * ゴールモデル（フレームとネット）を生成して返す。
    */
-  createGoalMesh() {
+  createGoalMesh(team) {
     const goalGroup = new THREE.Group();
 
+    const goalColor = team === 'alpha' ? 0xff4141 : 0x4195ff;
     const frameMaterial = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      metalness: 0.2,
-      roughness: 0.5,
+        color: goalColor,
+        metalness: 0.2,
+        roughness: 0.5,
     });
 
     const postGeometry = new THREE.BoxGeometry(
@@ -149,7 +150,7 @@ export default class Match {
     goalGroup.add(bottomBar);
 
     const netMaterial = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
+      color: goalColor,
       transparent: true,
       opacity: 0.25,
       side: THREE.DoubleSide,
@@ -163,6 +164,7 @@ export default class Match {
       C.GOAL_HEIGHT / 2,
       -C.GOAL_DEPTH + netGeometry.parameters.depth / 2
     );
+    
     goalGroup.add(net);
 
     return goalGroup;

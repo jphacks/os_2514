@@ -7,32 +7,32 @@
 // フィールド設定
 // -----------------------------------------------------------------------------
 export const FIELD_WIDTH = 100;       // フィールド横幅（X方向）
-export const FIELD_HEIGHT = 65;       // フィールド奥行き（Z方向）
+export const FIELD_HEIGHT = 150;       // フィールド奥行き（Z方向）
 
 // -----------------------------------------------------------------------------
 // プレイヤー設定
 // -----------------------------------------------------------------------------
 export const PLAYER_RADIUS = 1.5;     // プレイヤー当たり判定の半径
-export const PLAYER_SPEED = 20;       // 移動速度
+export const PLAYER_SPEED = 15;       // 移動速度
 export const PLAYER_Y = 1.5 + 1.5;    // モデルの初期 Y 座標（モデル高さ依存）
 export const STUN_DURATION = 2.0;     // 被弾時のスタン秒数
 
 // -----------------------------------------------------------------------------
 // 入力感度設定
 // -----------------------------------------------------------------------------
-export const JOYSTICK_SENSITIVITY = 0.8; // ジョイスティック回転感度の倍率
+export const JOYSTICK_SENSITIVITY = 1.0; // ジョイスティック回転感度の倍率
 
 // -----------------------------------------------------------------------------
 // ボール設定
 // -----------------------------------------------------------------------------
-export const BALL_RADIUS = 0.75;      // ボール当たり判定の半径
+export const BALL_RADIUS = 0.85;      // ボール当たり判定の半径
 
 // -----------------------------------------------------------------------------
 // キック関連
 // -----------------------------------------------------------------------------
-export const MIN_KICK_FORCE = 20;     // チャージ最小キック力
+export const MIN_KICK_FORCE = 10;     // チャージ最小キック力
 export const MAX_KICK_FORCE = 80;     // チャージ最大キック力
-export const MAX_KICK_CHARGE_TIME = 1.5; // チャージ最大秒数
+export const MAX_KICK_CHARGE_TIME = 2.0; // チャージ最大秒数
 export const KICK_VERTICAL_FORCE = 15;   // キック時の上方向加速度
 export const POST_GOAL_DELAY = 2.5;      // ゴール演出後の再開待機秒数
 
@@ -45,13 +45,13 @@ export const CATCH_HEIGHT_TOLERANCE = 2.5; // 縦方向の許容範囲
 // -----------------------------------------------------------------------------
 // ゴール設定
 // -----------------------------------------------------------------------------
-export const GOAL_WIDTH = 12;            // ゴール間口（横幅）
-export const GOAL_HEIGHT = 6;            // ゴール高さ
-export const GOAL_DEPTH = 4;             // ゴール奥行き
-export const GOAL_POST_THICKNESS = 0.4;  // ポストの太さ
+export const GOAL_WIDTH = 48;            // ゴール間口（横幅）
+export const GOAL_HEIGHT = 18;            // ゴール高さ
+export const GOAL_DEPTH = 16;             // ゴール奥行き
+export const GOAL_POST_THICKNESS = 0.8;  // ポストの太さ
 
 // -----------------------------------------------------------------------------
 // ゲーム全般
 // -----------------------------------------------------------------------------
-export const GAME_DURATION = 30;  // 1 試合の秒数
+export const GAME_DURATION = 60;  // 1 試合の秒数
 export const GRAVITY = -35;        // 重力加速度
