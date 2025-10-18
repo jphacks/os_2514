@@ -12,7 +12,6 @@ const CONSTANTS = require('../config/constants');
 class WebSocketManager {
   constructor(wss) {
     this.wss = wss;
-    this.connections = new Map();
     this._lastUpdateAt = new WeakMap(); // 追加: レート制限用
     this._setupEventListeners();
   }
@@ -88,10 +87,10 @@ class WebSocketManager {
     Logger.info('Player joined', { playerId, roomId: room.roomId, playerCount: room.getPlayerCount() });
 
     // 全クライアントに通知
-    this._broadcastToRoom(room.roomId, {
-      type: 'playerJoined',
-      payload: room.toJSON(),
-    });
+    // this._broadcastToRoom(room.roomId, {
+    //   type: 'playerJoined',
+    //   payload: room.toJSON(),
+    // });
 
     // ルームが満員の場合、マッチング開始
     if (room.isFull()) {
@@ -156,10 +155,10 @@ class WebSocketManager {
         },
       }));
 
-      this._broadcastToRoom(room.roomId, {
-        type: 'playerJoined',
-        payload: room.toJSON(),
-      });
+      // this._broadcastToRoom(room.roomId, {
+      //   type: 'playerJoined',
+      //   payload: room.toJSON(),
+      // });
 
       Logger.info('Player joined private room', { playerId, roomId: room.roomId });
 

@@ -1,7 +1,6 @@
 const Logger = require('../utils/Logger');
 const RoomService = require('../services/RoomService');
 const MatchService = require('../services/MatchService');
-const GameService = require('../services/GameService');
 
 exports.getServerStats = (req, res, next) => {
   try {

@@ -36,12 +36,6 @@ app.get('/health', (req, res) => {
 let wsManager;
 let redisService;
 
-wss.on('connection', (ws) => {
-  if (wsManager) {
-    wsManager.handleConnection(ws);
-  }
-});
-
 app.use(errorHandler);
 
 const PORT = ENV.PORT;
@@ -67,6 +61,19 @@ async function startServer() {
     // 3. WebSocketマネージャー
     wsManager = new WebSocketManager(wss);
     Logger.info('WebSocket manager initialized');
+
+    // 3.5 WebSocket接続ハンドラ（wsManager 初期化後に登録）
+    wss.on('connection', (ws) => {
+      try {
+        wsManager.handleConnection(ws);
+      } catch (err) {
+        Logger.error('WS connection handler error', { message: err.message });
+        try { ws.close(1011, 'Internal error'); } catch (_) {}
+      }
+    });
+    wss.on('error', (err) => {
+      Logger.error('WebSocket server error', { message: err.message });
+    });
 
     // 4. サーバー起動
     server.listen(PORT, () => {
@@ -94,7 +101,8 @@ async function startServer() {
     process.on('SIGTERM', async () => {
       Logger.info('SIGTERM received, shutting down...');
       GameLoopService.stop();
-      await redisService.disconnect();
+      try { await redisService.disconnect(); } catch (_) {}
+      wss.close(() => Logger.info('WebSocket server closed'));
       server.close(() => {
         Logger.info('Server closed');
         process.exit(0);
