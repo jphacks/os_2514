@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import * as C from '../ConstData/Constants.js';
+import { PlayerStates } from '../ConstData/PlayerStates.js';
 
 // =================================================================================
 // 1. Model (PlayerModel)
@@ -23,7 +24,7 @@ export default class PlayerModel {
         this.#isUser = isUser;
         this.#position = new THREE.Vector3(0, C.PLAYER_Y, 0);
         this.#quaternion = new THREE.Quaternion();
-        this.#state = 'idle';
+        this.#state = PlayerStates.Idle;
         this.#hasBall = false;
         this.#velocity = new THREE.Vector3();
         this.#stunTimer = C.STUN_DURATION;
@@ -47,7 +48,13 @@ export default class PlayerModel {
     // --- Setters ---
     setPosition(x, y, z) { this.#position.set(x, y, z); }
     setQuaternion(quaternion) { this.#quaternion.copy(quaternion); }
-    setState(state) { this.#state = state; }
+    setState(state) {
+        if (!PlayerStates.values().includes(state)) {
+            console.warn(`[PlayerModel] Unknown state: ${state}`);
+            return;
+        }
+        this.#state = state;
+    }
     setHasBall(hasBall) { 
         if (this.#hasBall !== hasBall) {
             console.log(`[State Change] ${this.#id} のボール所持状態: ${hasBall}`);

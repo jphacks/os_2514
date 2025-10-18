@@ -7,17 +7,22 @@ import BallView from "../Ball/BallView.js";
 import BallPresenter from "../Ball/BallPresenter.js";
 import UIManager from "./UIManager.js";
 import * as C from "../ConstData/Constants.js";
+import { PlayerStates } from "../ConstData/PlayerStates.js";
+import Goal from "../Goal/Goal.js";
 
 export default class Match {
   players = [];
   ballPresenter;
   ui;
   scene;
+  goalAlpha;
+  goalBravo;
 
   score = { alpha: 0, bravo: 0 };
   time = C.GAME_DURATION;
   state = "start";
   kickCharge = { charging: false, elapsed: 0 };
+  postGoalTimer = 0;
 
   constructor(scene) {
     this.scene = scene;
@@ -35,6 +40,9 @@ export default class Match {
     const ballModel = new BallModel();
     const ballView = new BallView(this.scene);
     this.ballPresenter = new BallPresenter(ballModel, ballView);
+
+    this.goalAlpha = new Goal("alpha");
+    this.goalBravo = new Goal("bravo");
 
     const resetButton = this.ui.getResetButton?.();
     resetButton?.addEventListener("click", () => this.start());
@@ -56,16 +64,108 @@ export default class Match {
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
     this.scene.add(ground);
+
+    const alphaGoalMesh = this.createGoalMesh();
+    alphaGoalMesh.position.set(0, 0, -C.FIELD_HEIGHT / 2);
+    this.scene.add(alphaGoalMesh);
+
+    const bravoGoalMesh = this.createGoalMesh();
+    bravoGoalMesh.position.set(0, 0, C.FIELD_HEIGHT / 2);
+    bravoGoalMesh.rotation.y = Math.PI;
+    this.scene.add(bravoGoalMesh);
   }
 
-  start() {
+  createGoalMesh() {
+    const goalGroup = new THREE.Group();
+
+    const frameMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      metalness: 0.2,
+      roughness: 0.5,
+    });
+
+    const postGeometry = new THREE.BoxGeometry(
+      C.GOAL_POST_THICKNESS,
+      C.GOAL_HEIGHT,
+      C.GOAL_POST_THICKNESS
+    );
+    const crossbarGeometry = new THREE.BoxGeometry(
+      C.GOAL_WIDTH,
+      C.GOAL_POST_THICKNESS,
+      C.GOAL_POST_THICKNESS
+    );
+    const netGeometry = new THREE.BoxGeometry(
+      C.GOAL_WIDTH,
+      C.GOAL_HEIGHT,
+      C.GOAL_POST_THICKNESS / 2
+    );
+
+    const halfWidth = C.GOAL_WIDTH / 2;
+    const postOffset = halfWidth - C.GOAL_POST_THICKNESS / 2;
+
+    const leftPost = new THREE.Mesh(postGeometry, frameMaterial);
+    leftPost.castShadow = true;
+    leftPost.position.set(-postOffset, C.GOAL_HEIGHT / 2, 0);
+    goalGroup.add(leftPost);
+
+    const rightPost = new THREE.Mesh(postGeometry, frameMaterial);
+    rightPost.castShadow = true;
+    rightPost.position.set(postOffset, C.GOAL_HEIGHT / 2, 0);
+    goalGroup.add(rightPost);
+
+    const crossbar = new THREE.Mesh(crossbarGeometry, frameMaterial);
+    crossbar.castShadow = true;
+    crossbar.position.set(0, C.GOAL_HEIGHT - C.GOAL_POST_THICKNESS / 2, 0);
+    goalGroup.add(crossbar);
+
+    const bottomBar = new THREE.Mesh(crossbarGeometry, frameMaterial);
+    bottomBar.castShadow = true;
+    bottomBar.position.set(
+      0,
+      C.GOAL_POST_THICKNESS / 2,
+      -C.GOAL_DEPTH + C.GOAL_POST_THICKNESS / 2
+    );
+    goalGroup.add(bottomBar);
+
+    const netMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.25,
+      side: THREE.DoubleSide,
+      metalness: 0,
+      roughness: 1,
+    });
+    const net = new THREE.Mesh(netGeometry, netMaterial);
+    net.receiveShadow = true;
+    net.position.set(
+      0,
+      C.GOAL_HEIGHT / 2,
+      -C.GOAL_DEPTH + netGeometry.parameters.depth / 2
+    );
+    goalGroup.add(net);
+
+    return goalGroup;
+  }
+
+  start({ resetScore = true, resetTime = true } = {}) {
+    if (resetScore) {
+      this.score = { alpha: 0, bravo: 0 };
+    }
+    if (resetTime) {
+      this.time = C.GAME_DURATION;
+    }
+
     this.state = "playing";
-    this.score = { alpha: 0, bravo: 0 };
-    this.time = C.GAME_DURATION;
+    this.postGoalTimer = 0;
     this.cancelKickCharge();
+    this.kickCharge.charging = false;
+    this.kickCharge.elapsed = 0;
 
     let alphaIndex = 0;
     let bravoIndex = 0;
+
+    this.kickCharge = { charging: false, elapsed: 0 };
+    this.postGoalTimer = 0;
 
     this.players.forEach((player) => {
       const model = player.model;
@@ -76,6 +176,7 @@ export default class Match {
       model.setHasBall(false);
       model.setQuaternion(new THREE.Quaternion());
       model.setCharging(false);
+      model.setState(PlayerStates.Idle);
 
       if (model.isUser()) {
         model.setPosition(0, C.PLAYER_Y, -15);
@@ -124,6 +225,22 @@ export default class Match {
   }
 
   update(deltaTime, input = {}) {
+    if (this.state === "goal") {
+      this.postGoalTimer = Math.max(0, this.postGoalTimer - deltaTime);
+
+      this.ui.updateScoreboard?.(this.score);
+      this.ui.updateTimer?.(this.time);
+      this.ui.updateDebugMonitor?.(
+        this.getUserPlayer()?.model ?? null,
+        this.ballPresenter.model
+      );
+
+      if (this.postGoalTimer === 0) {
+        this.start({ resetScore: false, resetTime: false });
+      }
+      return;
+    }
+
     if (this.state !== "playing") return;
 
     this.time = Math.max(0, this.time - deltaTime);
@@ -160,7 +277,7 @@ export default class Match {
     this.kickCharge.charging = true;
     this.kickCharge.elapsed = 0;
     userPlayer.model.setCharging(true);
-    userPlayer.model.setState("charge");
+    userPlayer.model.setState(PlayerStates.Charge);
     userPlayer.model.setVelocity(new THREE.Vector3());
     this.ui.showPowerGauge?.();
     this.ui.updatePowerGauge?.(0);
@@ -182,6 +299,7 @@ export default class Match {
       chargeRatio
     );
 
+    userPlayer.model.setState(PlayerStates.Kick);
     userPlayer.releaseBall();
     this.ballPresenter.model.setOwner(null);
 
@@ -202,8 +320,8 @@ export default class Match {
     const userPlayer = this.getUserPlayer();
     if (userPlayer) {
       userPlayer.model.setCharging(false);
-      if (wasCharging && userPlayer.model.getState() === "charge") {
-        userPlayer.model.setState("idle");
+      if (wasCharging && userPlayer.model.getState() === PlayerStates.Charge) {
+        userPlayer.model.setState(PlayerStates.Idle);
       }
     }
     this.ui.hidePowerGauge?.();
@@ -256,6 +374,12 @@ export default class Match {
     const ballPos = ballModel.getPosition();
     const ownerId = ballModel.getOwner();
 
+    const scoringTeam = this.getGoalScoringTeam(ballPos);
+    if (scoringTeam) {
+      this.handleGoal(scoringTeam, ownerId);
+      return;
+    }
+
     if (!ownerId) {
       const catchRadiusSq = (C.PLAYER_RADIUS + C.BALL_RADIUS) ** 2;
       for (const player of this.players) {
@@ -282,6 +406,7 @@ export default class Match {
           return;
         }
       }
+
       return;
     }
 
@@ -300,9 +425,7 @@ export default class Match {
       if (player.model.getStunTimer() > 0) continue;
       if (player.model.getCatchCooldown() > 0) continue;
 
-      diff
-        .copy(player.model.getPosition())
-        .sub(holderPos);
+      diff.copy(player.model.getPosition()).sub(holderPos);
 
       if (diff.lengthSq() <= collisionRadiusSq) {
         this.transferBall(holder, player);
@@ -318,6 +441,9 @@ export default class Match {
     loser.model.setCatchCooldown(C.CATCH_COOLDOWN);
     loser.model.setStunTimer(C.STUN_DURATION);
     loser.model.setCharging(false);
+    if (loser.model.getState() === PlayerStates.Charge) {
+      loser.model.setState(PlayerStates.Idle);
+    }
 
     winner.model.setHasBall(true);
     winner.model.setCatchCooldown(0);
@@ -334,18 +460,49 @@ export default class Match {
       this.cancelKickCharge();
     }
 
-    this.ui.updateDebugMonitor?.(
-      winner.model,
-      this.ballPresenter.model
-    );
+    this.ui.updateDebugMonitor?.(winner.model, this.ballPresenter.model);
   }
 
-  handleGoal(scoringTeam) {
+  handleGoal(scoringTeam, scorerId) {
     if (this.state !== "playing") return;
-    if (!this.score[scoringTeam]) this.score[scoringTeam] = 0;
 
+    this.state = "goal";
+    this.postGoalTimer = C.POST_GOAL_DELAY;
+    this.cancelKickCharge();
+
+    if (!this.score[scoringTeam]) {
+      this.score[scoringTeam] = 0;
+    }
     this.score[scoringTeam] += 1;
-    this.start();
+
+    const scorerPresenter = scorerId
+      ? this.players.find((p) => p.model.getId() === scorerId)
+      : null;
+
+    this.players.forEach((player) => {
+      player.model.setVelocity(new THREE.Vector3());
+      player.model.setHasBall(false);
+      player.model.setCharging(false);
+      const currentState = player.model.getState();
+      if (
+        currentState === PlayerStates.Charge ||
+        currentState === PlayerStates.Kick
+      ) {
+        player.model.setState(PlayerStates.Idle);
+      }
+      player.view.update(player.model);
+    });
+
+    this.ballPresenter.model.setOwner(null);
+    this.ballPresenter.model.setVelocity(new THREE.Vector3());
+    this.ballPresenter.view.update(this.ballPresenter.model);
+
+    this.ui.updateScoreboard?.(this.score);
+    this.ui.showGoalEffect?.(scoringTeam, scorerPresenter?.model ?? null);
+    this.ui.updateDebugMonitor?.(
+      this.getUserPlayer()?.model ?? null,
+      this.ballPresenter.model
+    );
   }
 
   handleTimeUp() {
@@ -356,5 +513,15 @@ export default class Match {
 
   getUserPlayer() {
     return this.players.find((p) => p.model.isUser());
+  }
+
+  getGoalScoringTeam(ballPosition) {
+    if (this.goalAlpha.isBallInside(ballPosition, C.BALL_RADIUS)) {
+      return this.goalAlpha.getScoringTeam();
+    }
+    if (this.goalBravo.isBallInside(ballPosition, C.BALL_RADIUS)) {
+      return this.goalBravo.getScoringTeam();
+    }
+    return null;
   }
 }

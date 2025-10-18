@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import * as C from '../ConstData/Constants.js';
+import { PlayerStates } from '../ConstData/PlayerStates.js';
 
 // =================================================================================
 // 3. Presenter (PlayerPresenter)
@@ -41,11 +42,24 @@ export default class PlayerPresenter {
 
         const currentPos = this.#model.getPosition();
         const velocity = this.#model.getVelocity();
-        const newPos = currentPos.add(velocity.multiplyScalar(deltaTime));
-        
+        const displacement = velocity.clone().multiplyScalar(deltaTime);
+        const newPos = currentPos.add(displacement);
+
         this.#model.setPosition(newPos.x, newPos.y, newPos.z);
-        
-        this.#model.setState(velocity.lengthSq() > 0 ? 'run' : 'idle');
+
+        const speedSq = velocity.lengthSq();
+        const currentState = this.#model.getState();
+        if (currentState === PlayerStates.Charge) {
+            if (!this.#model.getIsCharging()) {
+                this.#model.setState(speedSq > 0 ? PlayerStates.Run : PlayerStates.Idle);
+            }
+        } else if (currentState === PlayerStates.Kick) {
+            if (!this.#model.hasBall()) {
+                this.#model.setState(speedSq > 0 ? PlayerStates.Run : PlayerStates.Idle);
+            }
+        } else {
+            this.#model.setState(speedSq > 0 ? PlayerStates.Run : PlayerStates.Idle);
+        }
 
         this.#view.update(this.#model);
     }
