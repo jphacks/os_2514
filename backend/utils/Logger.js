@@ -2,7 +2,7 @@ const ENV = require('../config/environment');
 
 class Logger {
   constructor() {
-    this.level = ENV.LOG_LEVEL || 'info';
+    this.level = ENV.LOG_LEVEL || process.env.LOG_LEVEL || 'info';
     this.levels = { error: 0, warn: 1, info: 2, debug: 3 };
 
     // 同一メッセージのスパム抑制（デフォルト 1000ms）
