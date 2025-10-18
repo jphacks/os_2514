@@ -5,10 +5,7 @@ WORKDIR /app
 # DB module をコピー (backend の依存関係として必要)
 COPY . .
 
-# package.json をコピーして依存関係をインストール
-COPY backend/package*.json ./backend/
-WORKDIR /app/backend
-RUN npm install --omit=dev
+
 
 
 EXPOSE 3000
