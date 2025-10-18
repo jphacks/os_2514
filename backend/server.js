@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
 const http = require("http");
@@ -20,13 +22,36 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/api", routes);
 
-// WebSocket（syncService のみ）
+// WebSocket
 syncService(wss);
+
+// 統計情報エンドポイント
+app.get("/api/stats", (_, res) => {
+  const stats = syncService.getRoomStats();
+  res.json(stats);
+});
+
+// マッチング設定エンドポイント（開発用）
+app.post("/api/config/max-players", (req, res) => {
+  const { maxPlayers } = req.body;
+  if (typeof maxPlayers !== 'number' || maxPlayers < 2) {
+    return res.status(400).json({ error: "maxPlayers must be a number >= 2" });
+  }
+  
+  const success = syncService.setMaxPlayersPerRoom(maxPlayers);
+  if (success) {
+    res.json({ success: true, maxPlayers });
+  } else {
+    res.status(400).json({ error: "Cannot change max players while games are running" });
+  }
+});
 
 // ヘルスチェック
 app.get("/health", (_, res) => res.status(200).send("OK"));
 
 // サーバー起動
-server.listen(3000, () => {
-  console.log("Server running on http://localhost:3000");
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}/`);
+  console.log(`Max players per room: ${process.env.MAX_PLAYERS_PER_ROOM || 6}`);
 });
