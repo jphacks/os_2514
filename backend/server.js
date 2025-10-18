@@ -31,6 +31,10 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
+// WebSocket Manager初期化
+const wsManager = new WebSocketManager(wss);
+wss.on('connection', (ws) => wsManager.handleConnection(ws));
+
 // CORS 設定（明示ホワイトリスト推奨）
 const isProd = ENV.NODE_ENV === 'production';
 const configured = (ENV.CORS_ORIGINS || '')
