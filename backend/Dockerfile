@@ -47,7 +47,9 @@ RUN set -eux; \
 
 WORKDIR /app/backend
 
-# 依存関係をインストール（backend/package.json は 'os2514-db': 'file:../db' を参照）
+
+# server.jsの存在確認用（デバッグ用）
+RUN ls -l /app/backend
 RUN npm install --omit=dev
 
 # Cloud Run 既定の PORT=8080 を明示
