@@ -1,4 +1,4 @@
 FROM nginx:alpine
 WORKDIR /usr/share/nginx/html
 COPY Game .
-EXPOSE 80
+EXPOSE 8080
