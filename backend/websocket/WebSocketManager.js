@@ -24,9 +24,18 @@ class WebSocketManager {
     ws.on('message', (message) => {
       this._handleMessage(ws, message).catch(err => {
         Logger.error('WebSocket message error', { error: err.message, stack: err.stack });
+        // Distinguish parse/validation errors from internal errors
+        let errorType = 'error';
+        let errorMessage = 'Internal server error';
+        // Check for parse/validation errors
+        if (err.name === 'SyntaxError' || err.name === 'ValidationError' ||
+            err.message === 'Invalid JSON' || err.message === 'Missing message type') {
+          errorType = 'bad_request';
+          errorMessage = err.message || 'Bad request';
+        }
         ws.send(JSON.stringify({
-          type: 'error',
-          payload: { message: 'Internal server error' },
+          type: errorType,
+          payload: { message: errorMessage },
         }));
       });
     });
@@ -111,7 +120,16 @@ class WebSocketManager {
     const playerId = `p_${Math.floor(Math.random() * 10000)}`;
     ws.playerId = playerId;
 
-    const maxPlayers = Number(payload?.maxPlayers) || CONSTANTS.MAX_PLAYERS_PER_ROOM; // 修正: 定数使用
+    const min = CONSTANTS.MIN_PLAYERS_PER_ROOM ?? 2;
+    const max = CONSTANTS.MAX_PLAYERS_PER_ROOM;
+    const requested = Number(payload?.maxPlayers);
+    const maxPlayers = Number.isFinite(requested)
+      ? Math.min(max, Math.max(min, Math.round(requested)))
+      : max;
+    if (Number.isFinite(requested) && (requested < min || requested > max)) {
+      Logger.warn('maxPlayers clamped', { requested, applied: maxPlayers, min, max });
+    }
+
     const room = RoomService.createPrivateRoom(
       playerId,
       payload?.name || 'Unknown',
@@ -198,9 +216,10 @@ class WebSocketManager {
     // 型/範囲ガード
     const x = Number.isFinite(payload.x) ? payload.x : player.x;
     const z = Number.isFinite(payload.z) ? payload.z : player.z;
+    const direction = isFinite(Number(payload.direction)) ? Number(payload.direction) : player.direction;
     const state = typeof payload.state === 'string' ? payload.state : player.state;
 
-    player.update({ x, z, state });
+    player.update({ x, z, direction,state });
 
     try {
       const { getRedisService } = require('../services/RedisService');

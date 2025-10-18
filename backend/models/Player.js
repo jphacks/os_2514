@@ -13,22 +13,34 @@ class Player {
     this.lastActionTime = 0;
   }
 
-  /**
-   * プレイヤー位置・状態を更新
-   */
-  update(data) {
-    if (data.x !== undefined) {
-      this.x = Math.max(0, Math.min(CONSTANTS.CANVAS_WIDTH, data.x));
+  static _normalizeDeg(deg) {
+    let a = ((deg + 180) % 360 + 360) % 360 - 180;
+    return a === -180 ? 180 : a;
+  }
+
+  update({ x, z, state, direction }) {
+    const prevX = this.x;
+    const prevZ = this.z;
+
+    if (Number.isFinite(x)) this.x = x;
+    if (Number.isFinite(z)) this.z = z;
+    if (typeof state === 'string') this.state = state;
+
+    // 進行方向から向きを決定（小さな揺れは無視）
+    const dx = this.x - prevX;
+    const dz = this.z - prevZ;
+    const moved2 = dx * dx + dz * dz;
+    const EPS2 = 1e-6;
+
+    if (moved2 > EPS2) {
+      const deg = (Math.atan2(dz, dx) * 180) / Math.PI;
+      this.direction = Player._normalizeDeg(deg);
+    } else if (Number.isFinite(direction)) {
+      // 位置がほぼ変わらない場合のみ、明示指定があれば反映
+      this.direction = Player._normalizeDeg(direction);
     }
-    if (data.z !== undefined) {
-      this.z = Math.max(0, Math.min(CONSTANTS.CANVAS_HEIGHT, data.z));
-    }
-    if (data.direction !== undefined) {
-      this.direction = (data.direction % 360 + 360) % 360;
-    }
-    if (data.state !== undefined && data.state !== 'stun') {
-      this.state = data.state;
-    }
+
+    return this;
   }
 
   /**
