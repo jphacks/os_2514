@@ -1,7 +1,7 @@
 {
   "name": "tabletop-virtual-soccer",
   "version": "1.0.0",
-  "description": "Tabletop Virtual Soccer Game Backend",
+  "description": "",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
