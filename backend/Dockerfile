@@ -3,7 +3,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 # DB module をコピー (backend の依存関係として必要)
-COPY db ./db
+COPY ./backend ./backend
 
 # package.json をコピーして依存関係をインストール
 COPY backend/package*.json ./backend/
