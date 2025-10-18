@@ -121,7 +121,7 @@ export class HandTracker {
     // ベース URL は末尾スラッシュを保証
     const ensureSlash = (s) => s.endsWith('/') ? s : (s + '/');
     const bases = [
-      ensureSlash('./vendor/mediapipe/wasm'),
+      ensureSlash('../FingerTracking/vendor/mediapipe/wasm'),
       ensureSlash('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.11/wasm'),
       ensureSlash('https://unpkg.com/@mediapipe/tasks-vision@0.10.11/wasm'),
     ];

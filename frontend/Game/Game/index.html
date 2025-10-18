@@ -20,11 +20,11 @@
             position: absolute;
             bottom: 24px;
             right: 24px;
-            width: 260px;
-            height: 210px;
+            width: 432px;
+            height: 243px;
             border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.16);
-            background: rgba(0, 0, 0, 0.65);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            background: rgba(0, 0, 0, 0.55);
             backdrop-filter: blur(8px);
             color: #fff;
             font-size: 12px;
@@ -32,6 +32,7 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
         }
         #finger-tracking-pane.is-active {
             border-color: rgba(65, 149, 255, 0.6);
@@ -129,19 +130,12 @@
     </div>
     
     <div id="finger-tracking-pane">
-        <div class="finger-tracking-header">
-            <span>Finger Tracking</span>
-            <button id="finger-tracking-start-button" disabled>Start</button>
-        </div>
-        <div id="finger-tracking-video-slot">
-            <div class="finger-tracking-placeholder">開始ボタンでプレビューを表示</div>
-        </div>
-        <div id="finger-tracking-status">
-            <span>State</span><span id="finger-tracking-state" class="value">Idle</span>
-            <span>Confidence</span><span id="finger-tracking-confidence" class="value">0.00</span>
-            <span>Charge</span><span id="finger-tracking-charge" class="value">0%</span>
-            <span>FPS</span><span id="finger-tracking-fps" class="value">--</span>
-        </div>
+        <iframe
+            src="../../FingerTracking/index.html"
+            title="Finger Tracking"
+            sandbox="allow-scripts allow-same-origin allow-camera"
+            style="border:0;width:432px;height:243px;"
+        ></iframe>
     </div>
 
     <script type="importmap">
