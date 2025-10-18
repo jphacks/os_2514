@@ -9,6 +9,7 @@ import InputHandler from "../Input/InputHandler.js";
 import Joystick from "../Input/Joystick.js";
 import Match from "./Match.js";
 import { PlayerStates } from '../ConstData/PlayerStates.js';
+import * as C from '../ConstData/Constants.js';
 
 // =================================================================================
 // エントリーポイント (main.js)
@@ -60,19 +61,25 @@ window.addEventListener("message", (event) => {
     case "kick":
       console.log("[FingerTracking] kick received:", data);
       userPlayer.model.setState(PlayerStates.Kick);
+      match.endKickCharge();
       break;
     case "run":
       console.log("[FingerTracking] run received:", data);
       userPlayer.model.setState(PlayerStates.Run);
+      userPlayer.model.setVelocity(new THREE.Vector3(0, 0, C.PLAYER_SPEED));
       break;
     case "charge":
       console.log("[FingerTracking] charge received:", data);
+      match.beginKickCharge();
       userPlayer.model.setState(PlayerStates.Charge);
       userPlayer.model.setCharging(true);
+      userPlayer.model.setVelocity(new THREE.Vector3(0, 0, 0));
       break;
     case "idle":
       console.log("[FingerTracking] idle received:", data);
       userPlayer.model.setState(PlayerStates.Idle);
+      userPlayer.model.setVelocity(new THREE.Vector3(0, 0, 0));
+      userPlayer.model.setCharging(false);
       break;
     default:
       // 他のイベントは無視

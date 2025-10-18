@@ -1,61 +1,91 @@
-import * as THREE from 'three';
-import * as C from '../ConstData/Constants.js';
+import * as THREE from "three";
+import * as C from "../ConstData/Constants.js";
 
 // =================================================================================
 // 2. View (PlayerView)
 // =================================================================================
 export default class PlayerView {
-    playerMesh;
-    indicator;
-    #scene;
+  playerMesh;
+  indicator;
+  #scene;
 
-    constructor(scene, team) {
-        this.#scene = scene;
-        this.init(team);
+  constructor(scene, team) {
+    this.#scene = scene;
+    this.init(team);
+  }
+
+  /**
+   * プレイヤーメッシュとインジケーターを初期化する。
+   * @param {string} team 所属チーム ('alpha' or 'bravo')
+   */
+  init(team) {
+    const color = team === "alpha" ? 0xff4141 : 0x4195ff;
+    const geometry = new THREE.CapsuleGeometry(C.PLAYER_RADIUS, 3, 4, 16);
+    const material = new THREE.MeshStandardMaterial({ color: color });
+    this.playerMesh = new THREE.Mesh(geometry, material);
+    this.playerMesh.castShadow = true;
+    this.#scene.add(this.playerMesh);
+
+    const indicatorGeom = new THREE.RingGeometry(
+      C.PLAYER_RADIUS * 1.1,
+      C.PLAYER_RADIUS * 1.2,
+      32
+    );
+    const indicatorMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      side: THREE.DoubleSide,
+    });
+    this.indicator = new THREE.Mesh(indicatorGeom, indicatorMat);
+    this.indicator.rotation.x = -Math.PI / 2;
+    this.indicator.position.y = 0.1;
+    this.#scene.add(this.indicator);
+  }
+
+  /**
+   * 毎フレーム呼び出され、モデルの状態に基づいてメッシュを更新する。
+   * @param {PlayerModel} model プレイヤーモデル
+   */
+  update(model) {
+    this.playerMesh.position.copy(model.getPosition());
+    this.playerMesh.quaternion.copy(model.getQuaternion());
+
+    this.indicator.position.set(
+      model.getPosition().x,
+      0.1,
+      model.getPosition().z
+    );
+
+    this.indicator.material.color.set(
+      model.hasBall()
+        ? model.getTeam() === "alpha"
+          ? 0xff4141
+          : 0x4195ff
+        : 0xffffff
+    );
+
+    if (model.getState() === "Charge") {
+      // チャージ進行度（0～1）を取得
+      const chargeRatio =
+        typeof model.getKickChargeRatio === "function"
+          ? model.getKickChargeRatio()
+          : 0;
+      // 最小1, 最大1.5まで拡大
+      const scale = 1 + 0.5 * chargeRatio;
+      this.indicator.scale.set(scale, scale, scale);
+    } else {
+      this.indicator.scale.set(1, 1, 1);
     }
+  }
 
-    /**
-     * プレイヤーメッシュとインジケーターを初期化する。
-     * @param {string} team 所属チーム ('alpha' or 'bravo')
-     */
-    init(team) {
-        const color = team === 'alpha' ? 0xff4141 : 0x4195ff;
-        const geometry = new THREE.CapsuleGeometry(C.PLAYER_RADIUS, 3, 4, 16);
-        const material = new THREE.MeshStandardMaterial({ color: color });
-        this.playerMesh = new THREE.Mesh(geometry, material);
-        this.playerMesh.castShadow = true;
-        this.#scene.add(this.playerMesh);
-
-        const indicatorGeom = new THREE.RingGeometry(C.PLAYER_RADIUS * 1.1, C.PLAYER_RADIUS * 1.2, 32);
-        const indicatorMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
-        this.indicator = new THREE.Mesh(indicatorGeom, indicatorMat);
-        this.indicator.rotation.x = -Math.PI / 2;
-        this.indicator.position.y = 0.1;
-        this.#scene.add(this.indicator);
+  /**
+   * スタン状態に応じて点滅エフェクトを設定する。
+   * @param {boolean} isStunned スタン状態かどうか
+   */
+  setStunVisual(isStunned) {
+    if (isStunned) {
+      this.playerMesh.visible = Math.floor(Date.now() / 100) % 2 === 0;
+    } else {
+      this.playerMesh.visible = true;
     }
-
-    /**
-     * 毎フレーム呼び出され、モデルの状態に基づいてメッシュを更新する。
-     * @param {PlayerModel} model プレイヤーモデル
-     */
-    update(model) {
-        this.playerMesh.position.copy(model.getPosition());
-        this.playerMesh.quaternion.copy(model.getQuaternion());
-
-        this.indicator.position.set(model.getPosition().x, 0.1, model.getPosition().z);
-        
-        this.indicator.material.color.set(model.hasBall() ? (model.getTeam() === 'alpha' ? 0xff4141 : 0x4195ff) : 0xffffff);
-    }
-
-    /**
-     * スタン状態に応じて点滅エフェクトを設定する。
-     * @param {boolean} isStunned スタン状態かどうか
-     */
-    setStunVisual(isStunned) {
-        if(isStunned) {
-           this.playerMesh.visible = Math.floor(Date.now() / 100) % 2 === 0;
-        } else {
-           this.playerMesh.visible = true;
-        }
-    }
+  }
 }

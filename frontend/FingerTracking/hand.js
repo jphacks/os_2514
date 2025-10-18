@@ -309,11 +309,11 @@ export class HandTracker {
       const held = (nowSecFloat - this.chargeStartTime) >= (CFG.charge.holdSec || 0.5);
       if (held) this.chargeHeld = true;
     } else {
-      // CHARGE が解除されたとき、hold が成立していたら次の非 NONE を KICK にするフラグを立てる
+      // CHARGE が解除されたとき、hold が成立していたら次の状態を必ず KICK にする
       if (this.chargeHeld) {
         this.chargePending = true;
-  // 1.0 秒間だけ有効にする
-  this.chargePendingUntil = nowSecFloat + 1.0;
+        // NONE も含めて、次のフレームで必ず KICK へ遷移させる
+        this.chargePendingUntil = nowSecFloat + 1.0;
       }
       this.chargeHeld = false;
       this.chargeStartTime = null;
@@ -354,14 +354,13 @@ export class HandTracker {
       this.prevState = this.state;
     }
 
-    // chargePending が立っていれば，次に state が非 NONE になった時点で KICK に上書きする
-    // chargePending は一定時間だけ有効にする（期限切れはクリア）
+    // chargePending が立っていれば、次のフレームで必ず KICK に遷移
     if (this.chargePending) {
       if (nowSecFloat > (this.chargePendingUntil || 0)) {
         // 期限切れ
         this.chargePending = false;
         this.chargePendingUntil = 0;
-      } else if (this.state !== 'NONE') {
+      } else {
         // 強制 KICK（chargePending）: KICK に上書きし、保持期限を設定
         this.state = 'KICK';
         this.stateConf = 1.0;
