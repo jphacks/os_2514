@@ -1,4 +1,17 @@
 require("dotenv").config();
+// Boot log for Cloud Run startup troubleshooting
+console.log("[BOOT] Starting backend...", {
+  NODE_ENV: process.env.NODE_ENV,
+  PORT: process.env.PORT,
+  HOST: process.env.HOST,
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("[FATAL] Unhandled Rejection:", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("[FATAL] Uncaught Exception:", err);
+});
 
 const express = require("express");
 const cors = require("cors");
