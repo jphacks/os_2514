@@ -1,28 +1,33 @@
-const Player = require("../models/player");
-const Ball = require("../models/ball");
+const Player = require("./player");
+const Ball = require("./ball");
 
 const STUN_DURATION = 1000;
 const CANVAS_WIDTH = 600;
 const CANVAS_HEIGHT = 400;
 const BALL_PICKUP_RANGE = 20;
-const TACKLE_RANGE = 30; // タックル判定距離
-const PASS_RANGE = 100;  // パス受け取り判定距離
+const TACKLE_RANGE = 30;
+const PASS_RANGE = 100;
 
 class Room {
-  constructor() {
+  constructor(roomId, maxPlayers = 6) {
+    this.roomId = roomId;
+    this.maxPlayers = maxPlayers;
     this.players = {};
     this.ball = new Ball();
-    this.state = "waiting";
+    this.state = "waiting"; // waiting, matching, playing, finished
     this.timeLeft = 300;
     this.score = { alpha: 0, bravo: 0 };
-    this.initPositions();
+    this.createdAt = Date.now();
   }
 
-  static getInstance() {
-    if (!Room.instance) Room.instance = new Room();
-    return Room.instance;
+  getPlayerCount() {
+    return Object.keys(this.players).length;
   }
-  
+
+  isFull() {
+    return this.getPlayerCount() >= this.maxPlayers;
+  }
+
   initPositions() {
     this.ball.x = 300;
     this.ball.z = 200;
@@ -40,10 +45,8 @@ class Room {
 
   addPlayer(id, name, team) {
     this.players[id] = new Player(id, name, team);
-    
     this.players[id].x = 250 + Math.random() * 100;
     this.players[id].z = 150 + Math.random() * 100;
-    
     return this.players[id];
   }
 
@@ -102,12 +105,10 @@ class Room {
         break;
 
       case "tackle":
-        // 修正: ボール所有者の有無を問わず、近くのプレイヤーに tackle
         let tackleTarget = null;
         let minDist = 9999;
         
         Object.values(this.players).forEach(p => {
-          // 敵チームのプレイヤーを対象
           if (p.team !== player.team && p.state !== "stun") {
             const dist = Math.hypot(p.x - player.x, p.z - player.z);
             if (dist < minDist) {
@@ -117,13 +118,10 @@ class Room {
           }
         });
         
-        // 近い敵がいたら tackle 実行
         if (tackleTarget && minDist < TACKLE_RANGE) {
-          // ターゲットがボール所有者なら奪取
           if (this.ball.ownerId === tackleTarget.id) {
             this.ball.setOwner(player.id);
           }
-          // ターゲットをスタン状態に
           tackleTarget.state = "stun";
           tackleTarget.stunEndTime = Date.now() + STUN_DURATION;
         }
@@ -135,22 +133,17 @@ class Room {
       case "pass":
         if (this.ball.ownerId !== playerId) return;
         
-        // 修正: パス受け取り判定ロジック
         let passTarget = null;
         let minPassDist = 9999;
         
-        // 蹴ったボールの方向に近い味方プレイヤーを探す
         const kickDirection = actionData.direction || player.direction;
         const rad = kickDirection * Math.PI / 180;
         
         Object.values(this.players).forEach(p => {
-          // 同じチームのプレイヤーのみ対象
           if (p.team === player.team && p.id !== playerId) {
             const dist = Math.hypot(p.x - player.x, p.z - player.z);
             
-            // パス範囲内に味方がいるか確認
             if (dist < PASS_RANGE) {
-              // ボールの移動方向に近い味方を優先
               const targetDirection = Math.atan2(
                 p.z - player.z,
                 p.x - player.x
@@ -159,7 +152,6 @@ class Room {
                 ((targetDirection - kickDirection + 180) % 360) - 180
               );
               
-              // 角度の差と距離を組み合わせてスコア算出
               const passScore = dist + angleDiff * 2;
               
               if (passScore < minPassDist) {
@@ -170,12 +162,10 @@ class Room {
           }
         });
         
-        // パスターゲットが見つかった場合、ボールを渡す
         if (passTarget && minPassDist < PASS_RANGE + 50) {
           this.ball.setOwner(passTarget.id);
           console.log(`Pass: ${player.name} -> ${passTarget.name}`);
         } else {
-          // ターゲットなしの場合は普通にキック
           this.ball.kick(kickDirection);
           this.ball.ownerId = null;
         }
@@ -251,8 +241,15 @@ class Room {
     }
   }
 
+  startMatching() {
+    this.state = "matching";
+    console.log(`[Room ${this.roomId}] Matching started`);
+  }
+
   startGame() { 
-    this.state = "playing"; 
+    this.state = "playing";
+    this.initPositions();
+    console.log(`[Room ${this.roomId}] Game started`);
   }
 
   endGame() { 
@@ -267,10 +264,13 @@ class Room {
 
   toJSON() {
     return {
+      roomId: this.roomId,
       state: this.state,
       score: this.score,
       ball: this.ball.toJSON(),
-      players: Object.values(this.players).map(p => p.toJSON())
+      players: Object.values(this.players).map(p => p.toJSON()),
+      playerCount: this.getPlayerCount(),
+      maxPlayers: this.maxPlayers
     };
   }
 }
