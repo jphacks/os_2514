@@ -289,21 +289,35 @@ class WebSocketManager {
 
         try {
           room.state = 'finished';
-          const result = await MatchRepository.save({
-            score: room.score,
-            players: room.players,
-          });
+
+          // リポジトリ保存はベストエフォート
+          let result = null;
+          try {
+            result = await MatchRepository.save({
+              score: room.score,
+              players: room.players,
+            });
+          } catch (e) {
+            Logger.warn('MatchRepository.save failed (continuing)', { error: e.message, roomId: room.roomId });
+          }
+
+          const winner =
+            result?.winnerTeam ??
+            (room.score.alpha > room.score.bravo ? 'alpha'
+             : room.score.bravo > room.score.alpha ? 'bravo'
+             : 'draw');
+          const matchId = result?.matchId ?? null;
 
           this._broadcastToRoom(room.roomId, {
             type: 'gameEnd',
             payload: {
               ...room.toJSON(),
-              matchId: result.matchId,
-              winner: result.winnerTeam,
+              matchId,
+              winner,
             },
           });
 
-          // Redisは非同期にルーム単位でクリア
+          // Redisは非同期クリア（失敗は無視）
           (async () => {
             try {
               const { getRedisService } = require('../services/RedisService');
@@ -314,8 +328,7 @@ class WebSocketManager {
             }
           })();
 
-          GameLoopService.unregisterRoom(ws.roomId);
-          Logger.info('Game ended and saved', { roomId: room.roomId, matchId: result.matchId });
+          Logger.info('Game ended and saved', { roomId: room.roomId, matchId });
         } catch (error) {
           Logger.error('Failed to end game', { error: error.message });
           this._broadcastToRoom(room.roomId, {
@@ -358,19 +371,45 @@ class WebSocketManager {
   }
 
   async _handleLeave(ws) {
-    if (!ws.playerId) return;
+    const roomId = ws.roomId;
+    const playerId = ws.playerId;
+    if (!roomId) {
+      Logger.warn('Leave without roomId; skip unregister');
+      return;
+    }
 
-    RoomService.removePlayer(ws.playerId);
+    // 先にルームからプレイヤーを削除s
+    let removedRoom = null;
+    try {
+      removedRoom = RoomService.removePlayer(playerId);
+    } catch (e) {
+      Logger.warn('RoomService.removePlayer failed', { error: e.message, playerId, roomId });
+    }
 
+    // ルームの残人数を確認して、0なら登録解除
+    try {
+      const current = RoomService.getRoomById(roomId);
+      const count = current?.getPlayerCount ? current.getPlayerCount() : 0;
+      if (!current || count === 0) {
+        GameLoopService.unregisterRoom(roomId);
+        Logger.info('Room unregistered (empty)', { roomId });
+      } else {
+        Logger.info('Room still active; not unregistered', { roomId, playerCount: count });
+      }
+    } catch (e) {
+      Logger.warn('Room unregister check failed', { error: e.message, roomId });
+    }
+
+    // Redis 位置情報を削除（ベストエフォート）
     try {
       const { getRedisService } = require('../services/RedisService');
       const redisService = await getRedisService();
-      await redisService.deletePlayerPosition(ws.playerId, ws.roomId); // roomId追加
+      if (playerId) await redisService.deletePlayerPosition(playerId, roomId);
     } catch (error) {
-      Logger.warn('Redis deletePlayerPosition failed', { error: error.message });
+      Logger.warn('Redis deletePlayerPosition failed', { error: error.message, playerId, roomId });
     }
 
-    Logger.info('Player left', { playerId: ws.playerId });
+    if (playerId) Logger.info('Player left', { playerId, roomId });
 
     ws.playerId = null;
     ws.roomId = null;
