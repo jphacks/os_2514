@@ -37,7 +37,7 @@ app.post("/api/config/max-players", (req, res) => {
   if (typeof maxPlayers !== 'number' || maxPlayers < 2) {
     return res.status(400).json({ error: "maxPlayers must be a number >= 2" });
   }
-  
+
   const success = syncService.setMaxPlayersPerRoom(maxPlayers);
   if (success) {
     res.json({ success: true, maxPlayers });
@@ -49,9 +49,10 @@ app.post("/api/config/max-players", (req, res) => {
 // ヘルスチェック
 app.get("/health", (_, res) => res.status(200).send("OK"));
 
-// サーバー起動
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}/`);
+// サーバー起動（Cloud RunはPORT=8080、0.0.0.0での待受けが必要）
+const PORT = parseInt(process.env.PORT, 10) || 8080;
+const HOST = process.env.HOST || "0.0.0.0";
+server.listen(PORT, HOST, () => {
+  console.log(`Server running on http://${HOST}:${PORT}/`);
   console.log(`Max players per room: ${process.env.MAX_PLAYERS_PER_ROOM || 6}`);
 });
