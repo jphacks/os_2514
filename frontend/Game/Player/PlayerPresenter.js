@@ -73,12 +73,13 @@ export default class PlayerPresenter {
         } else {
             this.#joystickReferenceAngle = null;
         }
-        if (keys?.KeyW) {
-            const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(this.#model.getQuaternion());
-            velocity.add(forward.multiplyScalar(C.PLAYER_SPEED));
-        }
 
-        this.#model.setVelocity(velocity);
+        // if (keys?.KeyW) {
+        //     this.moveForward();
+        //     return;
+        // }
+
+        // this.resetVec();
     }
 
     /**
@@ -118,6 +119,16 @@ export default class PlayerPresenter {
             const ownerId = ballModel?.getOwner();
             this.debugBallOwner.textContent = ownerId ? ownerId : 'None';
         }
+    }
+
+    moveForward(){
+        const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(this.#model.getQuaternion());
+        this.#model.setVelocity(forward.multiplyScalar(C.PLAYER_SPEED));
+    }
+
+    resetVec()
+    {
+        this.#model.setVelocity(new THREE.Vector3(0, 0, 0));
     }
 
     /**

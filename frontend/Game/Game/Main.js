@@ -8,8 +8,8 @@ import BallPresenter from "../Ball/BallPresenter.js";
 import InputHandler from "../Input/InputHandler.js";
 import Joystick from "../Input/Joystick.js";
 import Match from "./Match.js";
-import { PlayerStates } from '../ConstData/PlayerStates.js';
-import * as C from '../ConstData/Constants.js';
+import { PlayerStates } from "../ConstData/PlayerStates.js";
+import * as C from "../ConstData/Constants.js";
 
 // =================================================================================
 // エントリーポイント (main.js)
@@ -66,7 +66,13 @@ window.addEventListener("message", (event) => {
     case "run":
       console.log("[FingerTracking] run received:", data);
       userPlayer.model.setState(PlayerStates.Run);
-      userPlayer.model.setVelocity(new THREE.Vector3(0, 0, C.PLAYER_SPEED));
+    //   userPlayer.model.setVelocity(new THREE.Vector3(0, 0, C.PLAYER_SPEED));
+      // PlayerPresenterのmoveForwardを呼び出す
+      if (typeof userPlayer.moveForward === "function") {
+        userPlayer.moveForward();
+        break;
+      }
+      userPlayer.resetVec();
       break;
     case "charge":
       console.log("[FingerTracking] charge received:", data);
