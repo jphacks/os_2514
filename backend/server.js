@@ -1,3 +1,8 @@
+const express = require('express');
+const http = require('http');
+const path = require('path');
+const WebSocket = require('ws');
+
 require("dotenv").config();
 // Boot log for Cloud Run startup troubleshooting
 console.log("[BOOT] Starting backend...", {
