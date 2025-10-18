@@ -24,6 +24,7 @@ class ActionService {
     if (!this._ensurePossessionIfClose(room, player)) return;
     room.ball.kick(direction, CONSTANTS.KICK_POWER);
     player.state = 'kick'; player.lastActionTime = Date.now();
+    eventEmitter.emit(EVENTS.BALL_KICKED, { room, playerId, direction });
   }
 
   handleTackle(room, playerId) {

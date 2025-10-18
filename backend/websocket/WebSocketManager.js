@@ -120,7 +120,7 @@ class WebSocketManager {
     ws.roomId = room.roomId;
     GameLoopService.registerRoom(room);
 
-    const roomCode = room.roomId.substr(-6).toUpperCase();
+    const roomCode = room.roomId.slice(-6).toUpperCase();
 
     ws.send(JSON.stringify({
       type: 'createRoomAck',
