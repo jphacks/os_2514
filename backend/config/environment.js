@@ -10,4 +10,5 @@ module.exports = {
   PG_DATABASE: process.env.PG_DATABASE || 'soccer_game',
   PG_USER: process.env.PG_USER || 'postgres',
   PG_PASSWORD: process.env.PG_PASSWORD || 'postgres',
+  CORS_ORIGINS: process.env.CORS_ORIGINS || '',
 };

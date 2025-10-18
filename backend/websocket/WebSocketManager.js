@@ -378,7 +378,7 @@ class WebSocketManager {
       return;
     }
 
-    // 先にルームからプレイヤーを削除s
+    // 先にルームからプレイヤーを削除
     let removedRoom = null;
     try {
       removedRoom = RoomService.removePlayer(playerId);
