@@ -14,7 +14,11 @@ class GameEventSubscriber {
     eventEmitter.on(EVENTS.GAME_ENDED, ({ room }) => {
       Logger.info('GameEventSubscriber: Game ended', {
         roomId: room.roomId,
-        winner: room.score.alpha > room.score.bravo ? 'alpha' : 'bravo',
+        winner: room.score.alpha > room.score.bravo
+          ? 'alpha'
+          : room.score.alpha < room.score.bravo
+            ? 'bravo'
+            : 'draw',
         score: room.score,
       });
     });
