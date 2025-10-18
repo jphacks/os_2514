@@ -1,20 +1,87 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>机上バーチャルサッカー (リファクタリング完了版)</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #111; }
-        canvas { display: block; }
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #111;
+        }
+
+        canvas {
+            display: block;
+        }
+
         /* UIManagerが管理するUI要素のスタイルはここに含めておきます */
-        #joystick-container { position: absolute; bottom: 30px; left: 30px; width: 150px; height: 150px; background-color: rgba(128, 128, 128, 0.4); border-radius: 50%; pointer-events: all; user-select: none; }
-        #joystick-thumb { position: absolute; top: 50%; left: 50%; width: 70px; height: 70px; background-color: rgba(255, 255, 255, 0.6); border-radius: 50%; transform: translate(-50%, -50%); }
-        #debug-monitor { position: absolute; top: 20px; left: 20px; background-color: rgba(0, 0, 0, 0.6); padding: 10px; border-radius: 5px; color: white; font-family: monospace; pointer-events: all; font-size: 12px; width: 200px; }
-        #debug-monitor h3 { margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #555; padding-bottom: 5px; cursor: pointer; }
-        #debug-monitor p { margin: 5px 0; }
-        #debug-monitor button { pointer-events: all; cursor: pointer; margin-top: 10px; width: 100%; padding: 5px; background-color: #333; color: white; border: 1px solid #555; }
-        #debug-monitor.collapsed { height: 30px; overflow: hidden; }
+        #joystick-container {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            width: 150px;
+            height: 150px;
+            background-color: rgba(128, 128, 128, 0.4);
+            border-radius: 50%;
+            pointer-events: all;
+            user-select: none;
+        }
+
+        #joystick-thumb {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 70px;
+            height: 70px;
+            background-color: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        #debug-monitor {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 10px;
+            border-radius: 5px;
+            color: white;
+            font-family: monospace;
+            pointer-events: all;
+            font-size: 12px;
+            width: 200px;
+        }
+
+        #debug-monitor h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #555;
+            padding-bottom: 5px;
+            cursor: pointer;
+        }
+
+        #debug-monitor p {
+            margin: 5px 0;
+        }
+
+        #debug-monitor button {
+            pointer-events: all;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+            padding: 5px;
+            background-color: #333;
+            color: white;
+            border: 1px solid #555;
+        }
+
+        #debug-monitor.collapsed {
+            height: 30px;
+            overflow: hidden;
+        }
+
         /* 他のUIスタイル（スコアボードなど）もここに追加 */
         #finger-tracking-pane {
             position: absolute;
@@ -34,9 +101,11 @@
             overflow: hidden;
             box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
         }
+
         #finger-tracking-pane.is-active {
             border-color: rgba(65, 149, 255, 0.6);
         }
+
         .finger-tracking-header {
             display: flex;
             align-items: center;
@@ -46,6 +115,7 @@
             font-weight: 600;
             letter-spacing: 0.04em;
         }
+
         #finger-tracking-start-button {
             padding: 4px 10px;
             border-radius: 6px;
@@ -55,10 +125,12 @@
             font-size: 12px;
             cursor: pointer;
         }
+
         #finger-tracking-start-button:disabled {
             opacity: 0.4;
             cursor: not-allowed;
         }
+
         #finger-tracking-video-slot {
             position: relative;
             flex: 1;
@@ -68,9 +140,11 @@
             justify-content: center;
             color: rgba(255, 255, 255, 0.6);
         }
+
         #finger-tracking-video-slot.has-feed {
             color: transparent;
         }
+
         #finger-tracking-video-slot video,
         #finger-tracking-video-slot canvas {
             position: absolute;
@@ -79,16 +153,20 @@
             height: 100%;
             object-fit: cover;
         }
+
         #finger-tracking-video-slot canvas {
             pointer-events: none;
         }
+
         .finger-tracking-placeholder {
             padding: 0 8px;
             text-align: center;
         }
+
         .finger-tracking-placeholder.hidden {
             display: none;
         }
+
         #finger-tracking-status {
             display: grid;
             grid-template-columns: repeat(2, auto);
@@ -96,10 +174,12 @@
             padding: 6px 10px 10px;
             font-variant-numeric: tabular-nums;
         }
+
         #finger-tracking-status span.value {
             justify-self: end;
             color: rgba(255, 255, 255, 0.85);
         }
+
         @media (max-width: 900px) {
             #finger-tracking-pane {
                 width: 220px;
@@ -110,9 +190,11 @@
         }
     </style>
 </head>
+
 <body>
     <div id="ui-container">
-        <div id="scoreboard" style="display:none; position: absolute; top: 20px; left: 50%; transform: translateX(-50%); color: white; font-size: 2em;">
+        <div id="scoreboard"
+            style="display:none; position: absolute; top: 20px; left: 50%; transform: translateX(-50%); color: white; font-size: 2em;">
             <span id="score-alpha">0</span> - <span id="timer">5:00</span> - <span id="score-bravo">0</span>
         </div>
     </div>
@@ -128,14 +210,15 @@
             <button id="debug-reset-button">Reset Game</button>
         </div>
     </div>
-    
+
     <div id="finger-tracking-pane">
-        <iframe
-            src="../../FingerTracking/index.html"
-            title="Finger Tracking"
-            sandbox="allow-scripts allow-same-origin allow-camera"
-            style="border:0;width:432px;height:243px;"
-        ></iframe>
+        <iframe src="../../FingerTracking/index.html" title="Finger Tracking"
+            sandbox="allow-scripts allow-same-origin allow-camera" style="border:0;width:432px;height:243px;"></iframe>
+    </div>
+
+    <div id="minimap"
+        style="position:fixed;top:20px;right:20px;width:240px;height:160px;background:#222;border-radius:8px;z-index:10;overflow:hidden;">
+        <canvas id="minimap-canvas" width="240" height="160"></canvas>
     </div>
 
     <script type="importmap">
@@ -147,4 +230,5 @@
     </script>
     <script type="module" src="main.js"></script>
 </body>
+
 </html>

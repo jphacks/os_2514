@@ -61,6 +61,7 @@ window.addEventListener("message", (event) => {
     case "kick":
       console.log("[FingerTracking] kick received:", data);
       userPlayer.model.setState(PlayerStates.Kick);
+      userPlayer.resetVec();
       match.endKickCharge();
       break;
     case "run":
@@ -79,12 +80,12 @@ window.addEventListener("message", (event) => {
       match.beginKickCharge();
       userPlayer.model.setState(PlayerStates.Charge);
       userPlayer.model.setCharging(true);
-      userPlayer.model.setVelocity(new THREE.Vector3(0, 0, 0));
+      userPlayer.resetVec();
       break;
     case "idle":
       console.log("[FingerTracking] idle received:", data);
       userPlayer.model.setState(PlayerStates.Idle);
-      userPlayer.model.setVelocity(new THREE.Vector3(0, 0, 0));
+      userPlayer.resetVec();
       userPlayer.model.setCharging(false);
       break;
     default:
@@ -92,6 +93,71 @@ window.addEventListener("message", (event) => {
       break;
   }
 });
+
+// ミニマップ描画
+function drawMinimap() {
+  const canvas = document.getElementById("minimap-canvas");
+  if (!canvas) return;
+
+  // ミニマップ全体を1.5倍に
+  const scale = 1.5;
+  canvas.width = 160 * scale;
+  canvas.height = 160 * scale;
+
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // ステージサイズ
+  const fieldW = C.FIELD_WIDTH;
+  const fieldH = C.FIELD_HEIGHT;
+
+  // ミニマップサイズをフィールドの比率に合わせて調整（横長に）
+  const margin = 10 * scale;
+  let mapW, mapH;
+  if (fieldW > fieldH) {
+    mapW = canvas.width - margin * 2;
+    mapH = mapW * (fieldH / fieldW);
+  } else {
+    mapH = canvas.height - margin * 2;
+    mapW = mapH * (fieldW / fieldH);
+  }
+
+  // フィールドの枠
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 2 * scale;
+  ctx.strokeRect(margin, margin, mapW, mapH);
+
+  // 座標変換関数（180度回転＋比率合わせ）
+  function toMinimap(x, z) {
+    const normX = 1 - (x + fieldW / 2) / fieldW;
+    const normZ = 1 - (z + fieldH / 2) / fieldH;
+    return {
+      x: margin + normX * mapW,
+      y: margin + normZ * mapH,
+    };
+  }
+
+  // プレイヤー・ボールの位置を描画
+  const players = match.players ?? [];
+  players.forEach((player) => {
+    const pos = player.model.getPosition();
+    const { x, y } = toMinimap(pos.x, pos.z);
+    ctx.fillStyle = player.model.getTeam() === "alpha" ? "#f44" : "#44f";
+    ctx.beginPath();
+    ctx.arc(x, y, 6 * scale, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // ボール
+  if (match.ballPresenter) {
+    const ballPos = match.ballPresenter.model.getPosition();
+    const { x, y } = toMinimap(ballPos.x, ballPos.z);
+    ctx.fillStyle = "#ff0";
+    ctx.beginPath();
+    ctx.arc(x, y, 4 * scale, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
 
 // --- ゲームループ ---
 function animate() {
@@ -123,6 +189,9 @@ function animate() {
   }
 
   renderer.render(scene, camera);
+
+  // ミニマップ描画
+  drawMinimap();
 }
 
 animate();
