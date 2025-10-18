@@ -47,8 +47,19 @@ const joystick = new Joystick("joystick-container", "joystick-thumb");
 const match = new Match(scene);
 const clock = new THREE.Clock();
 
+const resultModal = document.getElementById('result-modal');
+const resultMessage = document.getElementById('result-message');
+const resultResetButton = document.getElementById('result-reset-button');
+
 keyboard.onKeyDown("Space", () => match.beginKickCharge());
 keyboard.onKeyUp("Space", () => match.endKickCharge());
+
+if (resultResetButton) {
+    resultResetButton.addEventListener('click', () => {
+        hideResultModal();
+        match.start({ resetScore: true, resetTime: true });
+    });
+}
 
 window.addEventListener("message", (event) => {
   const data = event.data;
@@ -94,6 +105,71 @@ window.addEventListener("message", (event) => {
   }
 });
 
+// ミニマップ描画
+function drawMinimap() {
+  const canvas = document.getElementById("minimap-canvas");
+  if (!canvas) return;
+
+  // ミニマップ全体を1.5倍に
+  const scale = 1.5;
+  canvas.width = 160 * scale;
+  canvas.height = 160 * scale;
+
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // ステージサイズ
+  const fieldW = C.FIELD_WIDTH;
+  const fieldH = C.FIELD_HEIGHT;
+
+  // ミニマップサイズをフィールドの比率に合わせて調整（横長に）
+  const margin = 10 * scale;
+  let mapW, mapH;
+  if (fieldW > fieldH) {
+    mapW = canvas.width - margin * 2;
+    mapH = mapW * (fieldH / fieldW);
+  } else {
+    mapH = canvas.height - margin * 2;
+    mapW = mapH * (fieldW / fieldH);
+  }
+
+  // フィールドの枠
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 2 * scale;
+  ctx.strokeRect(margin, margin, mapW, mapH);
+
+  // 座標変換関数（180度回転＋比率合わせ）
+  function toMinimap(x, z) {
+    const normX = 1 - (x + fieldW / 2) / fieldW;
+    const normZ = 1 - (z + fieldH / 2) / fieldH;
+    return {
+      x: margin + normX * mapW,
+      y: margin + normZ * mapH,
+    };
+  }
+
+  // プレイヤー・ボールの位置を描画
+  const players = match.players ?? [];
+  players.forEach((player) => {
+    const pos = player.model.getPosition();
+    const { x, y } = toMinimap(pos.x, pos.z);
+    ctx.fillStyle = player.model.getTeam() === "alpha" ? "#f44" : "#44f";
+    ctx.beginPath();
+    ctx.arc(x, y, 6 * scale, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // ボール
+  if (match.ballPresenter) {
+    const ballPos = match.ballPresenter.model.getPosition();
+    const { x, y } = toMinimap(ballPos.x, ballPos.z);
+    ctx.fillStyle = "#ff0";
+    ctx.beginPath();
+    ctx.arc(x, y, 4 * scale, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
 // --- ゲームループ ---
 function animate() {
   requestAnimationFrame(animate);
@@ -124,6 +200,34 @@ function animate() {
   }
 
   renderer.render(scene, camera);
+
+  // ミニマップ描画
+  drawMinimap();
 }
+
+function showResultModal(winner, score) {
+    if (!resultModal || !resultMessage) return;
+    let msg = '';
+    if (score.alpha > score.bravo) {
+        msg = `アルファチームの勝ち！ (${score.alpha} - ${score.bravo})`;
+    } else if (score.alpha < score.bravo) {
+        msg = `ブラボーチームの勝ち！ (${score.alpha} - ${score.bravo})`;
+    } else {
+        msg = `引き分け！ (${score.alpha} - ${score.bravo})`;
+    }
+    resultMessage.textContent = msg;
+    resultModal.style.display = 'flex';
+}
+
+function hideResultModal() {
+    if (resultModal) resultModal.style.display = 'none';
+}
+
+// MatchクラスのhandleTimeUpをフック
+const originalHandleTimeUp = match.handleTimeUp.bind(match);
+match.handleTimeUp = function () {
+    originalHandleTimeUp();
+    showResultModal(null, this.score);
+};
 
 animate();

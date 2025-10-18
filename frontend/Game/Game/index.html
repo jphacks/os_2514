@@ -101,9 +101,11 @@
             overflow: hidden;
             box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
         }
+
         #finger-tracking-pane.is-active {
             border-color: rgba(65, 149, 255, 0.6);
         }
+
         .finger-tracking-header {
             display: flex;
             align-items: center;
@@ -113,6 +115,7 @@
             font-weight: 600;
             letter-spacing: 0.04em;
         }
+
         #finger-tracking-start-button {
             padding: 4px 10px;
             border-radius: 6px;
@@ -122,10 +125,12 @@
             font-size: 12px;
             cursor: pointer;
         }
+
         #finger-tracking-start-button:disabled {
             opacity: 0.4;
             cursor: not-allowed;
         }
+
         #finger-tracking-video-slot {
             position: relative;
             flex: 1;
@@ -135,9 +140,11 @@
             justify-content: center;
             color: rgba(255, 255, 255, 0.6);
         }
+
         #finger-tracking-video-slot.has-feed {
             color: transparent;
         }
+
         #finger-tracking-video-slot video,
         #finger-tracking-video-slot canvas {
             position: absolute;
@@ -146,16 +153,20 @@
             height: 100%;
             object-fit: cover;
         }
+
         #finger-tracking-video-slot canvas {
             pointer-events: none;
         }
+
         .finger-tracking-placeholder {
             padding: 0 8px;
             text-align: center;
         }
+
         .finger-tracking-placeholder.hidden {
             display: none;
         }
+
         #finger-tracking-status {
             display: grid;
             grid-template-columns: repeat(2, auto);
@@ -163,10 +174,12 @@
             padding: 6px 10px 10px;
             font-variant-numeric: tabular-nums;
         }
+
         #finger-tracking-status span.value {
             justify-self: end;
             color: rgba(255, 255, 255, 0.85);
         }
+
         @media (max-width: 900px) {
             #finger-tracking-pane {
                 width: 220px;
@@ -197,14 +210,41 @@
             <button id="debug-reset-button">Reset Game</button>
         </div>
     </div>
-    
+
     <div id="finger-tracking-pane">
-        <iframe
-            src="../../FingerTracking/index.html"
-            title="Finger Tracking"
-            sandbox="allow-scripts allow-same-origin allow-camera"
-            style="border:0;width:432px;height:243px;"
-        ></iframe>
+        <iframe src="../../FingerTracking/index.html" title="Finger Tracking"
+            sandbox="allow-scripts allow-same-origin allow-camera" style="border:0;width:432px;height:243px;"></iframe>
+    </div>
+
+    <div id="minimap"
+        style="position:fixed;top:20px;right:20px;width:240px;height:160px;background:#222;border-radius:8px;z-index:10;overflow:hidden;">
+        <canvas id="minimap-canvas" width="240" height="160"></canvas>
+    </div>
+
+    <div id="result-modal" style="
+    display:none;
+    position:fixed;
+    top:0; left:0; right:0; bottom:0;
+    background:rgba(0,0,0,0.7);
+    z-index:1000;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    font-size:2em;
+    color:#fff;
+">
+        <div id="result-message" style="margin-bottom:24px;"></div>
+        <button id="result-reset-button" style="
+        font-size:1em;
+        padding:12px 32px;
+        border-radius:8px;
+        border:none;
+        background:#36c;
+        color:#fff;
+        font-weight:700;
+        box-shadow:0 4px 12px rgba(0,0,0,0.4);
+        cursor:pointer;
+    ">もう一度プレイ</button>
     </div>
 
     <script type="importmap">
