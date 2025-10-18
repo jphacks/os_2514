@@ -1,26 +1,16 @@
+require("dotenv").config();
+
+console.log("[BOOT] Starting backend...", {
+  NODE_ENV: process.env.NODE_ENV,
+  PORT: process.env.PORT,
+  HOST: process.env.HOST,
+});
+
 const express = require('express');
 const http = require('http');
 const path = require('path');
 const WebSocket = require('ws');
-
-
-try {
-  require("dotenv").config();
-  const express = require('express');
-  const http = require('http');
-  const path = require('path');
-  const WebSocket = require('ws');
-  // ...既存の require 群...
-  // Boot log for Cloud Run startup troubleshooting
-  console.log("[BOOT] Starting backend...", {
-    NODE_ENV: process.env.NODE_ENV,
-    PORT: process.env.PORT,
-    HOST: process.env.HOST,
-  });
-} catch (err) {
-  console.error('[FATAL] Require failed:', err);
-  process.exit(1);
-}
+const cors = require('cors');
 
 process.on("unhandledRejection", (reason) => {
   console.error("[FATAL] Unhandled Rejection:", reason);
@@ -42,6 +32,7 @@ const playerRoutes = require('./routes/playerRoutes');
 const matchRoutes = require('./routes/matchRoutes');
 const statsRoutes = require('./routes/statsRoutes');
 const { errorHandler } = require('./utils/ErrorHandler');
+const RoomService = require('./services/RoomService');
 
 const app = express();
 const server = http.createServer(app);
@@ -99,11 +90,11 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // WebSocket
-syncService(wss);
+WebSocketManager.initialize(wss);
 
 // 統計情報エンドポイント
 app.get("/api/stats", (_, res) => {
-  const stats = syncService.getRoomStats();
+  const stats = RoomService.getStats();
   res.json(stats);
 });
 
@@ -114,7 +105,7 @@ app.post("/api/config/max-players", (req, res) => {
     return res.status(400).json({ error: "maxPlayers must be a number >= 2" });
   }
 
-  const success = syncService.setMaxPlayersPerRoom(maxPlayers);
+  const success = RoomService.setMaxPlayersPerRoom(maxPlayers);
   if (success) {
     res.json({ success: true, maxPlayers });
   } else {
