@@ -12,20 +12,36 @@ COPY . /app/src
 # - なければ /app/src をそのまま /app/backend とみなす
 # - /app/src/db が無い場合は GitHub から該当リビジョンの db を取得（Cloud Build でも動作）
 ARG REPO_URL="https://github.com/jphacks/os_2514"
-ARG REPO_REF="main"
+# フォールバック参照（Cloud Buildでブランチがmainでもdbが無い場合があるため、まず dev-infra-init-docker を試す）
+ARG REPO_REF="dev-infra-init-docker"
 RUN set -eux; \
+    # backend ディレクトリの正規化
     if [ -d /app/src/backend ]; then \
     cp -a /app/src/backend /app/backend; \
     else \
     cp -a /app/src /app/backend; \
     fi; \
+    # db ディレクトリの取得（優先: ビルドコンテキスト → リモートの dev-infra-init-docker → main）
     if [ -d /app/src/db ]; then \
     cp -a /app/src/db /app/db; \
     else \
-    echo "db/ not found in build context. Fetching from ${REPO_URL}@${REPO_REF}"; \
+    echo "db/ not found in build context. Trying to fetch from remote..."; \
     apk add --no-cache git; \
-    git clone --depth 1 --branch "${REPO_REF}" "${REPO_URL}" /tmp/repo; \
+    fetched=""; \
+    for REF in "${REPO_REF}" "dev-infra-init-docker" "main"; do \
+    echo "Trying ${REPO_URL}@${REF}"; \
+    if git ls-remote --heads "${REPO_URL}" "${REF}" | grep -q .; then \
+    rm -rf /tmp/repo; \
+    git clone --depth 1 --branch "${REF}" "${REPO_URL}" /tmp/repo && fetched="${REF}" && break; \
+    fi; \
+    done; \
+    if [ -n "$fetched" ] && [ -d /tmp/repo/db ]; then \
     cp -a /tmp/repo/db /app/db; \
+    echo "Fetched db from ${REPO_URL}@${fetched}"; \
+    else \
+    echo "ERROR: db directory not found in build context or remote branches (tried: ${REPO_REF}, dev-infra-init-docker, main)."; \
+    exit 1; \
+    fi; \
     rm -rf /tmp/repo; \
     fi
 
