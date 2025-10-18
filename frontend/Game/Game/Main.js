@@ -47,8 +47,19 @@ const joystick = new Joystick("joystick-container", "joystick-thumb");
 const match = new Match(scene);
 const clock = new THREE.Clock();
 
+const resultModal = document.getElementById('result-modal');
+const resultMessage = document.getElementById('result-message');
+const resultResetButton = document.getElementById('result-reset-button');
+
 keyboard.onKeyDown("Space", () => match.beginKickCharge());
 keyboard.onKeyUp("Space", () => match.endKickCharge());
+
+if (resultResetButton) {
+    resultResetButton.addEventListener('click', () => {
+        hideResultModal();
+        match.start({ resetScore: true, resetTime: true });
+    });
+}
 
 window.addEventListener("message", (event) => {
   const data = event.data;
@@ -193,5 +204,30 @@ function animate() {
   // ミニマップ描画
   drawMinimap();
 }
+
+function showResultModal(winner, score) {
+    if (!resultModal || !resultMessage) return;
+    let msg = '';
+    if (score.alpha > score.bravo) {
+        msg = `アルファチームの勝ち！ (${score.alpha} - ${score.bravo})`;
+    } else if (score.alpha < score.bravo) {
+        msg = `ブラボーチームの勝ち！ (${score.alpha} - ${score.bravo})`;
+    } else {
+        msg = `引き分け！ (${score.alpha} - ${score.bravo})`;
+    }
+    resultMessage.textContent = msg;
+    resultModal.style.display = 'flex';
+}
+
+function hideResultModal() {
+    if (resultModal) resultModal.style.display = 'none';
+}
+
+// MatchクラスのhandleTimeUpをフック
+const originalHandleTimeUp = match.handleTimeUp.bind(match);
+match.handleTimeUp = function () {
+    originalHandleTimeUp();
+    showResultModal(null, this.score);
+};
 
 animate();

@@ -221,6 +221,32 @@
         <canvas id="minimap-canvas" width="240" height="160"></canvas>
     </div>
 
+    <div id="result-modal" style="
+    display:none;
+    position:fixed;
+    top:0; left:0; right:0; bottom:0;
+    background:rgba(0,0,0,0.7);
+    z-index:1000;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    font-size:2em;
+    color:#fff;
+">
+        <div id="result-message" style="margin-bottom:24px;"></div>
+        <button id="result-reset-button" style="
+        font-size:1em;
+        padding:12px 32px;
+        border-radius:8px;
+        border:none;
+        background:#36c;
+        color:#fff;
+        font-weight:700;
+        box-shadow:0 4px 12px rgba(0,0,0,0.4);
+        cursor:pointer;
+    ">もう一度プレイ</button>
+    </div>
+
     <script type="importmap">
     {
         "imports": {
