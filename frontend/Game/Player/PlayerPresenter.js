@@ -50,36 +50,26 @@ export default class PlayerPresenter {
         const velocity = new THREE.Vector3();
 
         if (joystick?.active) {
-            if (this.#joystickReferenceAngle === null) {
-                this.#joystickReferenceAngle = joystick.angle;
-                this.#joystickReferenceQuaternion.copy(this.#model.getQuaternion());
-            }
-
-            const deltaAngle =
-                THREE.MathUtils.euclideanModulo(
-                    -joystick.angle - this.#joystickReferenceAngle + Math.PI,
-                    Math.PI * 2
-                ) - Math.PI;
-
-            const responsiveDelta = deltaAngle * C.JOYSTICK_SENSITIVITY;
-            const rotationDelta = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), responsiveDelta);
-
-            const nextQuat = this.#joystickReferenceQuaternion
-                .clone()
-                .multiply(rotationDelta)
-                .normalize();
-
-            this.#model.setQuaternion(nextQuat);
+          // 水平方向（X軸）だけ使う
+          const horizontal = -Math.sin(joystick.angle); // -1(左)～+1(右)
+          // 垂直方向は無視
+          // 回転速度は傾き具合（strength）で調整
+          const rotationSpeed =
+            horizontal * joystick.strength * 2.0 * C.JOYSTICK_SENSITIVITY; // 2.0は回転速度係数
+          // 加算方式で回転
+          const currentQuat = this.#model.getQuaternion();
+          const rotationDelta = new THREE.Quaternion().setFromAxisAngle(
+            new THREE.Vector3(0, 1, 0),
+            rotationSpeed * (1 / 60) // 1フレーム分
+          );
+          const nextQuat = currentQuat
+            .clone()
+            .multiply(rotationDelta)
+            .normalize();
+          this.#model.setQuaternion(nextQuat);
         } else {
-            this.#joystickReferenceAngle = null;
+          this.#joystickReferenceAngle = null;
         }
-
-        // if (keys?.KeyW) {
-        //     this.moveForward();
-        //     return;
-        // }
-
-        // this.resetVec();
     }
 
     /**
