@@ -334,6 +334,7 @@ export default class Match {
       this.cancelKickCharge();
       return;
     }
+    userPlayer.model.setKickChargeRatio?.(0); 
 
     const chargeRatio = this.kickCharge.elapsed / C.MAX_KICK_CHARGE_TIME;
     const power = THREE.MathUtils.lerp(
@@ -381,18 +382,18 @@ export default class Match {
 
     const userPlayer = this.getUserPlayer();
     if (!userPlayer?.model.hasBall()) {
-      this.cancelKickCharge();
-      return;
+        this.cancelKickCharge();
+        return;
     }
 
     this.kickCharge.elapsed = Math.min(
-      this.kickCharge.elapsed + deltaTime,
-      C.MAX_KICK_CHARGE_TIME
+        this.kickCharge.elapsed + deltaTime,
+        C.MAX_KICK_CHARGE_TIME
     );
-    this.ui.updatePowerGauge?.(
-      this.kickCharge.elapsed / C.MAX_KICK_CHARGE_TIME
-    );
-  }
+    const ratio = this.kickCharge.elapsed / C.MAX_KICK_CHARGE_TIME;
+    userPlayer.model.setKickChargeRatio?.(ratio); // ←追加
+    this.ui.updatePowerGauge?.(ratio);
+}
 
   /**
    * ボール所有者の前方へボールを固定する。
