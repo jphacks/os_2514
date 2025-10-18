@@ -22,26 +22,18 @@ const routes = require("./routes");
 const syncService = require("./services/syncService");
 
 const app = express();
-// CORS設定: 必要に応じてオリジンを指定
-app.use(cors({
-  origin: ["http://localhost:8080", "http://127.0.0.1:8080"], // フロントのURL
-  credentials: true
-}));
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-// ミドルウェア
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
-app.use("/api", routes);
+app.use(express.static(path.join(__dirname, 'public')));
 
-// WebSocket
-syncService(wss);
+app.use('/api/players', playerRoutes);
+app.use('/api/matches', matchRoutes);
+app.use('/api/stats', statsRoutes);
 
-// 統計情報エンドポイント
-app.get("/api/stats", (_, res) => {
-  const stats = syncService.getRoomStats();
-  res.json(stats);
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' });
 });
 
 // マッチング設定エンドポイント（開発用）
