@@ -14,6 +14,10 @@ export default class PlayerView {
         this.init(team);
     }
 
+    /**
+     * プレイヤーメッシュとインジケーターを初期化する。
+     * @param {string} team 所属チーム ('alpha' or 'bravo')
+     */
     init(team) {
         const color = team === 'alpha' ? 0xff4141 : 0x4195ff;
         const geometry = new THREE.CapsuleGeometry(C.PLAYER_RADIUS, 3, 4, 16);
@@ -30,6 +34,10 @@ export default class PlayerView {
         this.#scene.add(this.indicator);
     }
 
+    /**
+     * 毎フレーム呼び出され、モデルの状態に基づいてメッシュを更新する。
+     * @param {PlayerModel} model プレイヤーモデル
+     */
     update(model) {
         this.playerMesh.position.copy(model.getPosition());
         this.playerMesh.quaternion.copy(model.getQuaternion());
@@ -39,6 +47,10 @@ export default class PlayerView {
         this.indicator.material.color.set(model.hasBall() ? (model.getTeam() === 'alpha' ? 0xff4141 : 0x4195ff) : 0xffffff);
     }
 
+    /**
+     * スタン状態に応じて点滅エフェクトを設定する。
+     * @param {boolean} isStunned スタン状態かどうか
+     */
     setStunVisual(isStunned) {
         if(isStunned) {
            this.playerMesh.visible = Math.floor(Date.now() / 100) % 2 === 0;
@@ -46,5 +58,4 @@ export default class PlayerView {
            this.playerMesh.visible = true;
         }
     }
-    // 他のメソッドは変更なし
 }
