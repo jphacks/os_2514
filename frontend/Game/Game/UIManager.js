@@ -59,6 +59,7 @@ export default class UIManager {
 
         if (this.debugPlayerState) {
             this.debugPlayerState.textContent = playerModel.getState();
+            console.log(playerModel.getState());
         }
         if (this.debugPlayerPos) {
             this.debugPlayerPos.textContent = `x:${toFixed(position.x)} z:${toFixed(position.z)}`;

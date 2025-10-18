@@ -64,6 +64,7 @@ export function setRunBoost(conf) {
 
 export function kickImpulse(conf) {
   // 瞬間インパルス
+  window.parent.postMessage({ type: 'kick', confidence: conf }, '*');
   const up = PARAMS.kickUp * (0.5 + 0.5 * conf);
   const forward = PARAMS.kickForward * (0.5 + 0.5 * conf);
   velocity.y += up;

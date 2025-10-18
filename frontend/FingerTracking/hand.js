@@ -334,9 +334,24 @@ export class HandTracker {
       this.state = 'KICK';
       this.stateConf = desiredConf;
       this.kickHoldUntil = nowSecFloat + 1.0;
+      window.parent.postMessage({ type: 'kick', confidence: this.stateConf }, '*');
     } else {
       this.state = desiredState;
       this.stateConf = desiredConf;
+
+      // 状態が変化したときのみメッセージ送信
+      if (this.prevState !== this.state) {
+        if (this.state === 'KICK') {
+          window.parent.postMessage({ type: 'kick', confidence: this.stateConf }, '*');
+        } else if (this.state === 'RUN') {
+          window.parent.postMessage({ type: 'run', confidence: this.stateConf }, '*');
+        } else if (this.state === 'CHARGE') {
+          window.parent.postMessage({ type: 'charge', confidence: this.stateConf }, '*');
+        } else if (this.state === 'IDLE' || this.state === 'NONE') {
+          window.parent.postMessage({ type: 'idle', confidence: this.stateConf }, '*');
+        }
+      }
+      this.prevState = this.state;
     }
 
     // chargePending が立っていれば，次に state が非 NONE になった時点で KICK に上書きする
