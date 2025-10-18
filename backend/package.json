@@ -7,11 +7,9 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "db:init": "node scripts/initDb.js",
-    "db:init:new": "node -e \"require('os2514-db/initDb')\"",
     "db:setup": "node scripts/psqlSchema.js"
   },
   "dependencies": {
-    "os2514-db": "file:../db",
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",
     "express": "^4.21.2",
