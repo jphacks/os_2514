@@ -30,12 +30,12 @@
             left: 30px;
             width: 150px;
             height: 150px;
-            background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(128,128,128,0.25) 100%);
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, rgba(128, 128, 128, 0.25) 100%);
             border-radius: 50%;
             pointer-events: all;
             user-select: none;
-            border: 3px solid rgba(255,255,255,0.2);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 2px 8px rgba(255,255,255,0.1);
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 2px 8px rgba(255, 255, 255, 0.1);
             transition: transform 0.2s;
         }
 
@@ -49,19 +49,21 @@
             left: 50%;
             width: 70px;
             height: 70px;
-            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(255,255,255,0.6));
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.6));
             border-radius: 50%;
             transform: translate(-50%, -50%);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-            border: 2px solid rgba(255,255,255,0.3);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+            border: 2px solid rgba(255, 255, 255, 0.3);
         }
 
         /* デバッグモニター */
         #debug-monitor {
-            position: absolute;
+            display: none !important;
+            
+            /* position: absolute;
             top: 20px;
             left: 20px;
-            background: linear-gradient(135deg, rgba(0,0,0,0.85) 0%, rgba(20,20,40,0.85) 100%);
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.85) 0%, rgba(20, 20, 40, 0.85) 100%);
             padding: 12px 16px;
             border-radius: 12px;
             color: white;
@@ -70,14 +72,14 @@
             font-size: 13px;
             width: 220px;
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.15);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
-            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            transition: all 0.3s ease; */
         }
 
         #debug-monitor h3 {
             margin: 0 0 12px 0;
-            border-bottom: 2px solid rgba(100,149,237,0.6);
+            border-bottom: 2px solid rgba(100, 149, 237, 0.6);
             padding-bottom: 8px;
             cursor: pointer;
             font-size: 14px;
@@ -123,12 +125,12 @@
             font-weight: 700;
             font-size: 12px;
             transition: all 0.3s;
-            box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
 
         #debug-monitor button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102,126,234,0.6);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
         }
 
         #debug-monitor button:active {
@@ -149,7 +151,7 @@
             height: 243px;
             border-radius: 16px;
             border: 2px solid rgba(65, 149, 255, 0.3);
-            background: linear-gradient(135deg, rgba(0,0,0,0.75) 0%, rgba(20,30,48,0.75) 100%);
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.75) 0%, rgba(20, 30, 48, 0.75) 100%);
             backdrop-filter: blur(12px);
             color: #fff;
             font-size: 12px;
@@ -157,13 +159,13 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            box-shadow: 0 16px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.1) inset;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
             transition: all 0.3s ease;
         }
 
         #finger-tracking-pane:hover {
             border-color: rgba(65, 149, 255, 0.6);
-            box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 30px rgba(65,149,255,0.2);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 30px rgba(65, 149, 255, 0.2);
         }
 
         @media (max-width: 900px) {
@@ -187,7 +189,7 @@
             pointer-events: none;
             transition: opacity 0.5s, transform 0.5s;
             z-index: 9999;
-            text-shadow: 0 0 30px currentColor, 0 0 60px currentColor, 0 8px 32px rgba(0,0,0,0.8);
+            text-shadow: 0 0 30px currentColor, 0 0 60px currentColor, 0 8px 32px rgba(0, 0, 0, 0.8);
             letter-spacing: 0.05em;
         }
 
@@ -200,27 +202,26 @@
             transform: translateX(-50%);
             width: 400px;
             height: 40px;
-            background: linear-gradient(135deg, rgba(0,0,0,0.85) 0%, rgba(30,30,50,0.85) 100%);
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.85) 0%, rgba(30, 30, 50, 0.85) 100%);
             border-radius: 20px;
             overflow: hidden;
-            border: 3px solid rgba(255,255,255,0.25);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.6), inset 0 2px 8px rgba(0,0,0,0.5);
+            border: 3px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 2px 8px rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(10px);
         }
 
         #power-gauge {
             height: 100%;
             width: 0%;
-            background: linear-gradient(90deg, 
-                #4CAF50 0%, 
-                #8BC34A 20%,
-                #CDDC39 40%,
-                #FFC107 60%,
-                #FF9800 80%,
-                #FF5722 100%
-            );
+            background: linear-gradient(90deg,
+                    #4CAF50 0%,
+                    #8BC34A 20%,
+                    #CDDC39 40%,
+                    #FFC107 60%,
+                    #FF9800 80%,
+                    #FF5722 100%);
             transition: width 0.1s;
-            box-shadow: 0 0 20px rgba(76,175,80,0.8), inset 0 2px 8px rgba(255,255,255,0.3);
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.8), inset 0 2px 8px rgba(255, 255, 255, 0.3);
             position: relative;
             overflow: hidden;
         }
@@ -232,12 +233,14 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
             animation: shimmer 1.5s infinite;
         }
 
         @keyframes shimmer {
-            100% { left: 200%; }
+            100% {
+                left: 200%;
+            }
         }
 
         #power-gauge-label {
@@ -248,7 +251,7 @@
             font-weight: 900;
             font-size: 16px;
             color: white;
-            text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
             pointer-events: none;
             letter-spacing: 0.1em;
         }
@@ -257,33 +260,39 @@
         #scoreboard {
             display: none;
             position: absolute;
-            top: 24px;
+            top: 8px;
+            /* なるべく上詰め */
             left: 50%;
             transform: translateX(-50%);
             color: white;
             font-size: 2.5em;
             font-weight: 900;
-            background: linear-gradient(135deg, rgba(0,0,0,0.75) 0%, rgba(20,20,40,0.75) 100%);
-            padding: 16px 40px;
-            border-radius: 20px;
-            backdrop-filter: blur(12px);
-            border: 2px solid rgba(255,255,255,0.2);
-            box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+            background: linear-gradient(135deg, rgba(30, 30, 40, 0.28) 0%, rgba(30, 30, 40, 0.10) 100%);
+            padding: 2px 18px;
+            /* 上下を最小限に */
+            border-radius: 14px;
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.10);
             display: flex;
             align-items: center;
-            gap: 24px;
+            gap: 16px;
+            min-height: 1em;
+            /* 文字サイズギリギリ */
+            line-height: 1.1;
+            transition: background 0.3s;
         }
 
         #score-alpha {
             color: #ff4141;
-            text-shadow: 0 0 20px #ff4141, 0 4px 12px rgba(0,0,0,0.6);
+            text-shadow: 0 0 20px #ff4141, 0 4px 12px rgba(0, 0, 0, 0.6);
             min-width: 50px;
             text-align: center;
         }
 
         #score-bravo {
             color: #4195ff;
-            text-shadow: 0 0 20px #4195ff, 0 4px 12px rgba(0,0,0,0.6);
+            text-shadow: 0 0 20px #4195ff, 0 4px 12px rgba(0, 0, 0, 0.6);
             min-width: 50px;
             text-align: center;
         }
@@ -291,28 +300,91 @@
         #timer {
             color: #fff;
             font-size: 0.8em;
-            text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
         }
 
-        /* ミニマップ */
+        /* ミニマップ：フィールド比率でアスペクト比を維持しレスポンシブ */
         #minimap {
             position: fixed;
-            top: 20px;
-            right: 20px;
-            width: 260px;
-            height: 180px;
-            background: linear-gradient(135deg, rgba(0,0,0,0.85) 0%, rgba(20,30,40,0.85) 100%);
+            top: 2vw;
+            right: 2vw;
+            width: 14vw;
+            /* ← 28vw から半分に */
+            aspect-ratio: 100 / 150;
+            max-width: 160px;
+            /* ← 320px から半分に */
+            max-height: 240px;
+            /* ← 480px から半分に */
+            min-width: 50px;
+            /* ← 100px から半分に */
+            min-height: 75px;
+            /* ← 150px から半分に */
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.85) 0%, rgba(20, 30, 40, 0.85) 100%);
             border-radius: 16px;
             z-index: 10;
             overflow: hidden;
-            border: 2px solid rgba(255,255,255,0.2);
-            box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         #minimap-canvas {
             width: 100%;
             height: 100%;
+            display: block;
+            transform: rotate(180deg);
+        }
+
+        /* 指トラッキング画面もパーセンテージ指定＋アスペクト比維持 */
+        #finger-tracking-pane {
+            position: fixed;
+            bottom: 2vw;
+            right: 2vw;
+            width: 28vw;
+            aspect-ratio: 4 / 3;
+            max-width: 320px;
+            max-height: 240px;
+            min-width: 120px;
+            min-height: 90px;
+            border-radius: 16px;
+            border: 2px solid rgba(65, 149, 255, 0.3);
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.75) 0%, rgba(20, 30, 48, 0.75) 100%);
+            backdrop-filter: blur(12px);
+            color: #fff;
+            font-size: 12px;
+            pointer-events: all;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+            transition: all 0.3s ease;
+        }
+
+        #finger-tracking-pane iframe,
+        #finger-tracking-pane canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        @media (max-width: 600px) {
+
+            #minimap,
+            #finger-tracking-pane {
+                width: 20vw;
+                /* ← 40vw から半分に */
+                min-width: 40px;
+                /* ← 80px から半分に */
+                min-height: 30px;
+                /* ← 60px から半分に */
+                max-width: 90px;
+                /* ← 180px から半分に */
+                max-height: 135px;
+                /* ← 270px から半分に */
+            }
         }
 
         /* リザルトモーダル */
@@ -323,7 +395,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: radial-gradient(circle, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.95) 100%);
+            background: radial-gradient(circle, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.95) 100%);
             z-index: 1000;
             align-items: center;
             justify-content: center;
@@ -336,13 +408,20 @@
         #result-message {
             margin-bottom: 40px;
             font-weight: 900;
-            text-shadow: 0 4px 20px rgba(0,0,0,0.8);
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
             animation: resultPulse 2s ease-in-out infinite;
         }
 
         @keyframes resultPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
         }
 
         #result-reset-button {
@@ -353,7 +432,7 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: #fff;
             font-weight: 900;
-            box-shadow: 0 8px 32px rgba(102,126,234,0.6);
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.6);
             cursor: pointer;
             transition: all 0.3s;
             text-transform: uppercase;
@@ -362,7 +441,7 @@
 
         #result-reset-button:hover {
             transform: translateY(-4px);
-            box-shadow: 0 12px 48px rgba(102,126,234,0.8);
+            box-shadow: 0 12px 48px rgba(102, 126, 234, 0.8);
         }
 
         #result-reset-button:active {
@@ -378,7 +457,7 @@
             font-size: 3em;
             font-weight: 900;
             color: #FFD700;
-            text-shadow: 0 0 30px #FFD700, 0 4px 16px rgba(0,0,0,0.8);
+            text-shadow: 0 0 30px #FFD700, 0 4px 16px rgba(0, 0, 0, 0.8);
             opacity: 0;
             pointer-events: none;
             z-index: 999;
@@ -414,15 +493,20 @@
         .loading-spinner {
             width: 80px;
             height: 80px;
-            border: 8px solid rgba(255,255,255,0.1);
+            border: 8px solid rgba(255, 255, 255, 0.1);
             border-top: 8px solid #667eea;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         .loading-text {
