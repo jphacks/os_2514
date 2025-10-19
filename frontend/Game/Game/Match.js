@@ -12,9 +12,23 @@ import Goal from "../Goal/Goal.js";
 
 // =====================================================================================
 // Match クラス (改良版)
+// Match クラス (改良版)
 // 責務：試合全体の進行管理（リソース生成・状態遷移・入力伝搬・衝突判定・UI同期）
 // =====================================================================================
 export default class Match {
+  players = [];
+  ballPresenter;
+  ui;
+  scene;
+  goalAlpha;
+  goalBravo;
+
+  score = { alpha: 0, bravo: 0 };
+  time = C.GAME_DURATION;
+  state = "start";
+  kickCharge = { charging: false, elapsed: 0 };
+  postGoalTimer = 0;
+
   players = [];
   ballPresenter;
   ui;
