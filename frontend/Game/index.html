@@ -324,29 +324,24 @@
         
         /* ------------------ 4. 遊び方モーダル (デザイン改善) ------------------ */
 
+        /* how-to-play モーダルを画像で表示するスタイルに変更 */
         #how-to-play-modal .modal-content-wrapper {
-            background: #e91e63; 
-            padding: 40px; 
-            border-radius: 10px;
+            background-image: url('./Images/how_to_play.PNG'); /* ここを差し替え */
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            width: 90%;
+            max-width: 900px;
+            aspect-ratio: 16/9; /* 画像の縦横比に合わせて調整して下さい */
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
-            aspect-ratio: auto; 
-            height: auto;
-            max-width: 700px; 
-            color: white; 
-            text-align: left; 
+            border-radius: 8px;
+            padding: 0; /* 画像表示のため余白は不要 */
+            box-sizing: border-box;
         }
 
-        #how-to-play-modal h2 {
-            color: white; 
-            margin-top: 0;
-            font-size: 2.5em;
-            text-align: center; 
-            margin-bottom: 20px;
-        }
-        #how-to-play-modal p {
-            font-size: 1.2em;
-            line-height: 1.6; 
-            margin-bottom: 1em;
+        /* モーダル内のテキストは不要なので非表示にする（close ボタンのみ表示） */
+        #how-to-play-modal .modal-content-wrapper > *:not(.close-button) {
+            display: none;
         }
 
     </style>
@@ -358,6 +353,15 @@
         <button id="how-to-play-button" class="title-button-overlay" onclick="showHowToPlayModal()"></button>
         <button id="tech-info-button" class="title-button-overlay" onclick="alert('技術解説ページへ遷移します。今回は遷移先がないためアラートを表示しました。')"></button>
     </div>
+
+    <!-- タイトル用BGM（ループ再生） -->
+    <audio id="title-bgm" loop preload="auto">
+        <source src="./Music/iwashiro_amakuchi.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <!-- ミュート/音量ボタン（オーバーレイ） -->
+    <button id="audio-toggle" title="音を切り替える" style="position:fixed; right:16px; top:16px; z-index:50; background:rgba(0,0,0,0.4); color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer;">🔈</button>
 
     
 <div id="play-modal" class="modal" onclick="closeModalOnClickOutside(event)">
@@ -507,6 +511,121 @@
                 alert('ルームIDを入力してください。');
             }
         }
+
+        // ------------------ BGM 制御 ------------------
+        const bgm = document.getElementById('title-bgm');
+        const audioToggle = document.getElementById('audio-toggle');
+        let hasStarted = false;
+
+        // attempt to play (used after user interaction)
+        function tryStartBgm() {
+            if (hasStarted) return;
+            // Start muted first to increase chance of autoplay succeeding on some browsers
+            bgm.muted = true;
+            const p = bgm.play();
+            if (p && typeof p.then === 'function') {
+                p.then(() => {
+                    hasStarted = true;
+                    // show muted icon until user unmutes
+                    audioToggle.textContent = '🔇';
+                }).catch(() => {
+                    // play failed (autoplay blocked), keep it ready to play on user gesture
+                    hasStarted = false;
+                });
+            }
+        }
+
+        // Toggle mute/unmute and ensure music plays after unmute
+        audioToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!hasStarted) {
+                // user gesture: start and unmute
+                bgm.muted = false;
+                bgm.play().catch(() => {});
+                hasStarted = true;
+                audioToggle.textContent = '🔊';
+                return;
+            }
+
+            bgm.muted = !bgm.muted;
+            audioToggle.textContent = bgm.muted ? '🔈' : '🔊';
+        });
+
+        // Ensure user interactions on title buttons start the BGM (satisfies autoplay gesture requirement)
+        ['play-button', 'how-to-play-button', 'tech-info-button'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('click', () => {
+                    tryStartBgm();
+                    // if already started and muted, unmute slightly so user hears immediately
+                    if (hasStarted && bgm.muted) {
+                        // do not force unmute; keep muted until user toggles
+                    }
+                });
+            }
+        });
+
+        // Try starting BGM on first pointerdown anywhere on document (covers keyboard/touch/click)
+        function onFirstGesture() {
+            // On the very first user gesture, unmute and play so the user hears music immediately.
+            try {
+                if (!hasStarted) {
+                    bgm.muted = false;
+                    const p = bgm.play();
+                    if (p && typeof p.then === 'function') {
+                        p.then(() => {
+                            hasStarted = true;
+                            audioToggle.textContent = '🔊';
+                        }).catch(() => {
+                            // If unmuted play is blocked, fall back to muted attempt so subsequent gestures can start it
+                            tryStartBgm();
+                        });
+                    } else {
+                        // play() may be synchronous in some contexts
+                        hasStarted = true;
+                        audioToggle.textContent = '🔊';
+                    }
+                }
+            } catch (e) {
+                // ignore errors and keep fallback behavior
+                tryStartBgm();
+            }
+
+            // remove listeners after first gesture
+            document.removeEventListener('pointerdown', onFirstGesture);
+            document.removeEventListener('keydown', onFirstGesture);
+        }
+
+        document.addEventListener('pointerdown', onFirstGesture);
+        document.addEventListener('keydown', onFirstGesture);
+
+        // --- 自動で音声ボタンを押して再生を試みる（ベストエフォート） ---
+        window.addEventListener('load', () => {
+            // まずは既存の試行（ミュートで再生を試みる）
+            tryStartBgm();
+
+            // その後アンミュートして再生を試みる（多くのブラウザではユーザー操作が必要なので失敗する可能性あり）
+            try {
+                bgm.muted = false;
+                const p = bgm.play();
+                if (p && typeof p.then === 'function') {
+                    p.then(() => {
+                        hasStarted = true;
+                        audioToggle.textContent = '🔊';
+                    }).catch(() => {
+                        // autoplay blocked; 表示のみ更新
+                        audioToggle.textContent = bgm.muted ? '🔈' : '🔊';
+                    });
+                }
+            } catch (e) {
+                // ignore
+            }
+
+            // 見た目上ボタンが押されたようにする（プログラム的な dispatch はユーザー操作とは見なされないが、UI表現のため）
+            try {
+                audioToggle.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+            } catch (e) {}
+        });
     </script>
 </body>
 </html>
