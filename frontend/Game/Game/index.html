@@ -570,6 +570,15 @@
 
     <div id="combo-counter">COMBO x<span id="combo-count">0</span></div>
 
+    <!-- ゲーム用BGM -->
+    <audio id="game-bgm" loop preload="auto">
+        <source src="../Music/iwashiro_fullbit_menkyo.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <!-- ゲーム用オーディオトグル（右上） -->
+    <button id="game-audio-toggle" title="音を切り替える" style="position:fixed; right:16px; top:16px; z-index:2000; background:rgba(0,0,0,0.4); color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer;">🔈</button>
+
     <script type="importmap">
     {
         "imports": {
@@ -578,6 +587,70 @@
     }
     </script>
     <script type="module" src="Main.js"></script>
+    <script>
+        // --- ゲームBGM制御 ---
+        (function() {
+            const bgm = document.getElementById('game-bgm');
+            const toggle = document.getElementById('game-audio-toggle');
+            let started = false;
+
+            function tryStart() {
+                if (started) return;
+                bgm.muted = true;
+                const p = bgm.play();
+                if (p && typeof p.then === 'function') {
+                    p.then(() => {
+                        started = true;
+                        toggle.textContent = '🔇';
+                    }).catch(() => {
+                        started = false;
+                    });
+                }
+            }
+
+            toggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (!started) {
+                    bgm.muted = false;
+                    bgm.play().catch(() => {});
+                    started = true;
+                    toggle.textContent = '🔊';
+                    return;
+                }
+                bgm.muted = !bgm.muted;
+                toggle.textContent = bgm.muted ? '🔈' : '🔊';
+            });
+
+            function onFirstGesture() {
+                tryStart();
+                document.removeEventListener('pointerdown', onFirstGesture);
+                document.removeEventListener('keydown', onFirstGesture);
+            }
+
+            document.addEventListener('pointerdown', onFirstGesture);
+            document.addEventListener('keydown', onFirstGesture);
+        })();
+
+        // --- 自動で音声ボタンを押して再生を試みる（ベストエフォート） ---
+        window.addEventListener('load', () => {
+            try {
+                const bgm = document.getElementById('game-bgm');
+                const toggle = document.getElementById('game-audio-toggle');
+                // ミュートでまず再生を試みる
+                bgm.muted = true;
+                const p = bgm.play();
+                if (p && typeof p.then === 'function') {
+                    p.then(() => {
+                        toggle.textContent = '🔇';
+                    }).catch(() => {
+                        // autoplay blocked
+                    });
+                }
+                // 見た目だけボタンを押したようにする（実際の再生はブラウザ次第）
+                try { toggle.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); } catch (e) {}
+            } catch (e) {}
+        });
+    </script>
 </body>
 
 </html>
