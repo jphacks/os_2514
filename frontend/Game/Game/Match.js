@@ -11,35 +11,29 @@ import { PlayerStates } from "../ConstData/PlayerStates.js";
 import Goal from "../Goal/Goal.js";
 
 // =====================================================================================
-// Match クラス
+// Match クラス (改良版)
 // 責務：試合全体の進行管理（リソース生成・状態遷移・入力伝搬・衝突判定・UI同期）
 // =====================================================================================
 export default class Match {
-  // --- 主要コンポーネント ---------------------------------------------------------
-  players = [];                    // PlayerPresenter の集合
-  ballPresenter;                   // ボールの Presenter
-  ui;                              // UI 管理クラス
-  scene;                           // three.js シーン参照
-  goalAlpha;                       // アルファ側ゴール
-  goalBravo;                       // ブラボー側ゴール
+  players = [];
+  ballPresenter;
+  ui;
+  scene;
+  goalAlpha;
+  goalBravo;
 
-  // --- 試合状態 ---------------------------------------------------------------
-  score = { alpha: 0, bravo: 0 };  // 両チームの得点
-  time = C.GAME_DURATION;          // 残り試合時間（秒）
-  state = "start";                 // 試合の進行状態
-  kickCharge = { charging: false, elapsed: 0 }; // キックチャージ情報
-  postGoalTimer = 0;               // ゴール演出待機タイマー
+  score = { alpha: 0, bravo: 0 };
+  time = C.GAME_DURATION;
+  state = "start";
+  kickCharge = { charging: false, elapsed: 0 };
+  postGoalTimer = 0;
 
-  /**
-   * シーン参照を受け取り、試合に必要なオブジェクトを初期化する。
-   */
   constructor(scene) {
     this.scene = scene;
     this.ui = new UIManager();
 
-    this.createField();            // フィールドとゴールを生成
+    this.createField();
 
-    // プレイヤーの生成と配置
     this.players.push(this.createPlayer("user_alpha_1", "alpha", true));
     this.players.push(this.createPlayer("ai_alpha_2", "alpha", false));
     this.players.push(this.createPlayer("ai_alpha_3", "alpha", false));
@@ -47,34 +41,25 @@ export default class Match {
     this.players.push(this.createPlayer("ai_bravo_2", "bravo", false));
     this.players.push(this.createPlayer("ai_bravo_3", "bravo", false));
 
-    // ボールの生成
     const ballModel = new BallModel();
     const ballView = new BallView(this.scene);
     this.ballPresenter = new BallPresenter(ballModel, ballView);
 
-    // ゴール判定用オブジェクト
     this.goalAlpha = new Goal("alpha");
     this.goalBravo = new Goal("bravo");
 
-    // デバッグ用リセットボタン
     const resetButton = this.ui.getResetButton?.();
     resetButton?.addEventListener("click", () => this.start());
 
-    this.start();                  // 試合開始
+    this.start();
   }
 
-  /**
-   * プレイヤーの MVP をまとめて生成するファクトリメソッド。
-   */
   createPlayer(id, team, isUser) {
     const model = new PlayerModel(id, team, isUser);
     const view = new PlayerView(this.scene, team);
     return new PlayerPresenter(model, view);
   }
 
-  /**
-   * フィールド平面とゴールオブジェクトをシーンへ追加する。
-   */
   createField() {
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(C.FIELD_WIDTH, C.FIELD_HEIGHT),
@@ -94,9 +79,6 @@ export default class Match {
     this.scene.add(bravoGoalMesh);
   }
 
-  /**
-   * ゴールモデル（フレームとネット）を生成して返す。
-   */
   createGoalMesh(team) {
     const goalGroup = new THREE.Group();
 
@@ -171,10 +153,6 @@ export default class Match {
     return goalGroup;
   }
 
-  /**
-   * 試合を初期化または再開する。
-   * @param {{resetScore?: boolean, resetTime?: boolean}} options
-   */
   start({ resetScore = true, resetTime = true } = {}) {
     if (resetScore) {
       this.score = { alpha: 0, bravo: 0 };
@@ -186,7 +164,6 @@ export default class Match {
     this.state = "playing";
     this.postGoalTimer = 0;
 
-    // キックチャージ状態をリセット
     this.cancelKickCharge();
     this.kickCharge.charging = false;
     this.kickCharge.elapsed = 0;
@@ -194,7 +171,6 @@ export default class Match {
     let alphaIndex = 0;
     let bravoIndex = 0;
 
-    // 盤面リセット
     this.players.forEach((player) => {
       const model = player.model;
 
@@ -224,7 +200,6 @@ export default class Match {
       player.view.update(model);
     });
 
-    // ボールの初期位置
     const userPlayer = this.getUserPlayer();
     if (userPlayer) {
       this.ballPresenter.model.setOwner(userPlayer.model.getId());
@@ -245,7 +220,6 @@ export default class Match {
     }
     this.ballPresenter.view.update(this.ballPresenter.model);
 
-    // UI を最新状態に同期
     this.ui.updateScoreboard?.(this.score);
     this.ui.updateTimer?.(this.time);
     this.ui.updateDebugMonitor?.(
@@ -254,11 +228,7 @@ export default class Match {
     );
   }
 
-  /**
-   * 1フレーム分のロジックと描画更新を実行する。
-   */
   update(deltaTime, input = {}) {
-    // ゴール演出中は時間経過と UI 更新のみ行う
     if (this.state === "goal") {
       this.postGoalTimer = Math.max(0, this.postGoalTimer - deltaTime);
 
@@ -277,27 +247,22 @@ export default class Match {
 
     if (this.state !== "playing") return;
 
-    // 試合時間の減少と時間切れ処理
     this.time = Math.max(0, this.time - deltaTime);
     if (this.time === 0) {
       this.handleTimeUp();
     }
 
-    // プレイヤー更新（ユーザーと AI の入力で分岐）
     this.players.forEach((player) => {
       const playerInput = player.model.isUser() ? input : {};
       player.update(deltaTime, playerInput);
     });
 
-    // キックチャージ進行
     this.updateKickCharge(deltaTime);
 
-    // ボールと衝突判定
     this.ballPresenter.update(deltaTime);
     this.attachBallToOwner();
     this.checkCollisions();
 
-    // UI 同期
     this.ui.updateScoreboard?.(this.score);
     this.ui.updateTimer?.(this.time);
     this.ui.updateDebugMonitor?.(
@@ -306,9 +271,6 @@ export default class Match {
     );
   }
 
-  /**
-   * キックチャージ開始処理（スペース押下で発動）。
-   */
   beginKickCharge() {
     if (this.state !== "playing") return;
 
@@ -325,9 +287,6 @@ export default class Match {
     this.ui.updatePowerGauge?.(0);
   }
 
-  /**
-   * キックチャージ完了処理（スペース離しで発動）。
-   */
   endKickCharge() {
     if (!this.kickCharge.charging) return;
 
@@ -336,7 +295,7 @@ export default class Match {
       this.cancelKickCharge();
       return;
     }
-    userPlayer.model.setKickChargeRatio?.(0); 
+    userPlayer.model.setKickChargeRatio?.(0);
 
     const chargeRatio = this.kickCharge.elapsed / C.MAX_KICK_CHARGE_TIME;
     const power = THREE.MathUtils.lerp(
@@ -357,9 +316,6 @@ export default class Match {
     this.cancelKickCharge();
   }
 
-  /**
-   * チャージ途中でのキャンセル（スタンやボール喪失時）。
-   */
   cancelKickCharge() {
     const wasCharging = this.kickCharge.charging;
 
@@ -376,9 +332,6 @@ export default class Match {
     this.ui.hidePowerGauge?.();
   }
 
-  /**
-   * チャージ経過時間を蓄積し、ゲージを更新する。
-   */
   updateKickCharge(deltaTime) {
     if (!this.kickCharge.charging) return;
 
@@ -393,13 +346,10 @@ export default class Match {
         C.MAX_KICK_CHARGE_TIME
     );
     const ratio = this.kickCharge.elapsed / C.MAX_KICK_CHARGE_TIME;
-    userPlayer.model.setKickChargeRatio?.(ratio); // ←追加
+    userPlayer.model.setKickChargeRatio?.(ratio);
     this.ui.updatePowerGauge?.(ratio);
-}
+  }
 
-  /**
-   * ボール所有者の前方へボールを固定する。
-   */
   attachBallToOwner() {
     const ballModel = this.ballPresenter.model;
     const ownerId = ballModel.getOwner();
@@ -424,22 +374,17 @@ export default class Match {
     ballModel.setVelocity(new THREE.Vector3());
   }
 
-  /**
-   * ゴール判定・キャッチ判定・タックル判定をまとめて行う。
-   */
   checkCollisions() {
     const ballModel = this.ballPresenter.model;
     const ballPos = ballModel.getPosition();
     const ownerId = ballModel.getOwner();
 
-    // ゴール判定を最優先
     const scoringTeam = this.getGoalScoringTeam(ballPos);
     if (scoringTeam) {
       this.handleGoal(scoringTeam, ownerId);
       return;
     }
 
-    // ボール無所属 → キャッチ判定
     if (!ownerId) {
       const catchRadiusSq = (C.PLAYER_RADIUS + C.BALL_RADIUS) ** 2;
       for (const player of this.players) {
@@ -470,7 +415,6 @@ export default class Match {
       return;
     }
 
-    // ボール保持中 → タックル判定
     const holder = this.players.find((p) => p.model.getId() === ownerId);
     if (!holder) {
       ballModel.setOwner(null);
@@ -495,9 +439,6 @@ export default class Match {
     }
   }
 
-  /**
-   * タックル成功時のボール譲渡処理。
-   */
   transferBall(loser, winner) {
     if (!loser.model.hasBall()) return;
 
@@ -527,9 +468,6 @@ export default class Match {
     this.ui.updateDebugMonitor?.(winner.model, this.ballPresenter.model);
   }
 
-  /**
-   * ゴール発生時の処理。スコア、演出、再開タイマーを管理。
-   */
   handleGoal(scoringTeam, scorerId) {
     if (this.state !== "playing") return;
 
@@ -546,7 +484,6 @@ export default class Match {
       ? this.players.find((p) => p.model.getId() === scorerId)
       : null;
 
-    // 全プレイヤーを初期状態に戻す
     this.players.forEach((player) => {
       player.model.setVelocity(new THREE.Vector3());
       player.model.setHasBall(false);
@@ -561,39 +498,27 @@ export default class Match {
       player.view.update(player.model);
     });
 
-    // ボールをリセット
     this.ballPresenter.model.setOwner(null);
     this.ballPresenter.model.setVelocity(new THREE.Vector3());
     this.ballPresenter.view.update(this.ballPresenter.model);
 
-    // UI へ反映
     this.ui.updateScoreboard?.(this.score);
-    this.ui.showGoalEffect?.(scoringTeam, scorerPresenter?.model ?? null);
     this.ui.updateDebugMonitor?.(
       this.getUserPlayer()?.model ?? null,
       this.ballPresenter.model
     );
   }
 
-  /**
-   * 試合時間がゼロになった際の終幕処理。
-   */
   handleTimeUp() {
     if (this.state !== "playing") return;
     this.state = "result";
     this.cancelKickCharge();
   }
 
-  /**
-   * ユーザー操作プレイヤー（自チームキャラ）を取得する。
-   */
   getUserPlayer() {
     return this.players.find((p) => p.model.isUser());
   }
 
-  /**
-   * ボールの位置からどちらのゴールが決まったかを判定する。
-   */
   getGoalScoringTeam(ballPosition) {
     if (this.goalAlpha.isBallInside(ballPosition, C.BALL_RADIUS)) {
       return this.goalAlpha.getScoringTeam();
