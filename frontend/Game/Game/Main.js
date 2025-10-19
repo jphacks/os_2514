@@ -34,6 +34,50 @@ document.body.appendChild(renderer.domElement);
 // --- ライティング ---
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
 scene.add(ambientLight);
+window.createGoalParticles = function (team) {
+  const color = team === "alpha" ? 0xff4141 : 0x4195ff;
+  const particleCount = 40;
+  const geometry = new THREE.BufferGeometry();
+  const positions = [];
+  const velocities = [];
+  for (let i = 0; i < particleCount; i++) {
+    positions.push(0, 10, 0); // ゴール中央
+    velocities.push(
+      (Math.random() - 0.5) * 20,
+      Math.random() * 15,
+      (Math.random() - 0.5) * 20
+    );
+  }
+  geometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3)
+  );
+  const material = new THREE.PointsMaterial({
+    color,
+    size: 1.2,
+    transparent: true,
+  });
+  const points = new THREE.Points(geometry, material);
+  points.userData = { velocities, life: 1.2 };
+  scene.add(points);
+  // アニメーション
+  function animateParticles() {
+    points.userData.life -= 0.03;
+    if (points.userData.life <= 0) {
+      scene.remove(points);
+      return;
+    }
+    const pos = points.geometry.attributes.position.array;
+    for (let i = 0; i < particleCount; i++) {
+      pos[i * 3] += points.userData.velocities[i * 3] * 0.03;
+      pos[i * 3 + 1] += points.userData.velocities[i * 3 + 1] * 0.03;
+      pos[i * 3 + 2] += points.userData.velocities[i * 3 + 2] * 0.03;
+    }
+    points.geometry.attributes.position.needsUpdate = true;
+    requestAnimationFrame(animateParticles);
+  }
+  animateParticles();
+};
 const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
 directionalLight.position.set(10, 20, -10);
 directionalLight.castShadow = true;
@@ -47,18 +91,18 @@ const joystick = new Joystick("joystick-container", "joystick-thumb");
 const match = new Match(scene);
 const clock = new THREE.Clock();
 
-const resultModal = document.getElementById('result-modal');
-const resultMessage = document.getElementById('result-message');
-const resultResetButton = document.getElementById('result-reset-button');
+const resultModal = document.getElementById("result-modal");
+const resultMessage = document.getElementById("result-message");
+const resultResetButton = document.getElementById("result-reset-button");
 
 keyboard.onKeyDown("Space", () => match.beginKickCharge());
 keyboard.onKeyUp("Space", () => match.endKickCharge());
 
 if (resultResetButton) {
-    resultResetButton.addEventListener('click', () => {
-        hideResultModal();
-        match.start({ resetScore: true, resetTime: true });
-    });
+  resultResetButton.addEventListener("click", () => {
+    hideResultModal();
+    match.start({ resetScore: true, resetTime: true });
+  });
 }
 
 window.addEventListener("message", (event) => {
@@ -78,7 +122,7 @@ window.addEventListener("message", (event) => {
     case "run":
       console.log("[FingerTracking] run received:", data);
       userPlayer.model.setState(PlayerStates.Run);
-    //   userPlayer.model.setVelocity(new THREE.Vector3(0, 0, C.PLAYER_SPEED));
+      //   userPlayer.model.setVelocity(new THREE.Vector3(0, 0, C.PLAYER_SPEED));
       // PlayerPresenterのmoveForwardを呼び出す
       if (typeof userPlayer.moveForward === "function") {
         userPlayer.moveForward();
@@ -181,7 +225,13 @@ function animate() {
     keys: keyboard.getState(),
   };
 
+  const loadingScreen = document.getElementById("loading-screen");
+  if (loadingScreen) {
+    loadingScreen.classList.add("hidden");
+  }
+
   // --- Matchオブジェクトの更新 ---
+
   // ゲームの全てのロジックはMatchクラスに委譲
   match.update(delta, {
     keys: input.keys,
@@ -206,28 +256,28 @@ function animate() {
 }
 
 function showResultModal(winner, score) {
-    if (!resultModal || !resultMessage) return;
-    let msg = '';
-    if (score.alpha > score.bravo) {
-        msg = `アルファチームの勝ち！ (${score.alpha} - ${score.bravo})`;
-    } else if (score.alpha < score.bravo) {
-        msg = `ブラボーチームの勝ち！ (${score.alpha} - ${score.bravo})`;
-    } else {
-        msg = `引き分け！ (${score.alpha} - ${score.bravo})`;
-    }
-    resultMessage.textContent = msg;
-    resultModal.style.display = 'flex';
+  if (!resultModal || !resultMessage) return;
+  let msg = "";
+  if (score.alpha > score.bravo) {
+    msg = `アルファチームの勝ち！ (${score.alpha} - ${score.bravo})`;
+  } else if (score.alpha < score.bravo) {
+    msg = `ブラボーチームの勝ち！ (${score.alpha} - ${score.bravo})`;
+  } else {
+    msg = `引き分け！ (${score.alpha} - ${score.bravo})`;
+  }
+  resultMessage.textContent = msg;
+  resultModal.style.display = "flex";
 }
 
 function hideResultModal() {
-    if (resultModal) resultModal.style.display = 'none';
+  if (resultModal) resultModal.style.display = "none";
 }
 
 // MatchクラスのhandleTimeUpをフック
 const originalHandleTimeUp = match.handleTimeUp.bind(match);
 match.handleTimeUp = function () {
-    originalHandleTimeUp();
-    showResultModal(null, this.score);
+  originalHandleTimeUp();
+  showResultModal(null, this.score);
 };
 
 animate();
