@@ -258,21 +258,27 @@
         #scoreboard {
             display: none;
             position: absolute;
-            top: 24px;
+            top: 8px;
+            /* なるべく上詰め */
             left: 50%;
             transform: translateX(-50%);
             color: white;
             font-size: 2.5em;
             font-weight: 900;
-            background: linear-gradient(135deg, rgba(0, 0, 0, 0.75) 0%, rgba(20, 20, 40, 0.75) 100%);
-            padding: 16px 40px;
-            border-radius: 20px;
-            backdrop-filter: blur(12px);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+            background: linear-gradient(135deg, rgba(30, 30, 40, 0.28) 0%, rgba(30, 30, 40, 0.10) 100%);
+            padding: 2px 18px;
+            /* 上下を最小限に */
+            border-radius: 14px;
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.10);
             display: flex;
             align-items: center;
-            gap: 24px;
+            gap: 16px;
+            min-height: 1em;
+            /* 文字サイズギリギリ */
+            line-height: 1.1;
+            transition: background 0.3s;
         }
 
         #score-alpha {
