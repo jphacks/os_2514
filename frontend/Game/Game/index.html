@@ -622,34 +622,30 @@
             });
 
             function onFirstGesture() {
-                tryStart();
+                try {
+                    bgm.muted = false;
+                    const p = bgm.play();
+                    if (p && typeof p.then === 'function') {
+                        p.then(() => {
+                            started = true;
+                            toggle.textContent = '🔊';
+                        }).catch(() => {
+                            tryStart();
+                        });
+                    } else {
+                        started = true;
+                        toggle.textContent = '🔊';
+                    }
+                } catch (e) {
+                    tryStart();
+                }
                 document.removeEventListener('pointerdown', onFirstGesture);
                 document.removeEventListener('keydown', onFirstGesture);
             }
 
-            document.addEventListener('pointerdown', onFirstGesture);
-            document.addEventListener('keydown', onFirstGesture);
+            document.addEventListener('pointerdown', onFirstGesture, { once: true });
+            document.addEventListener('keydown', onFirstGesture, { once: true });
         })();
-
-        // --- 自動で音声ボタンを押して再生を試みる（ベストエフォート） ---
-        window.addEventListener('load', () => {
-            try {
-                const bgm = document.getElementById('game-bgm');
-                const toggle = document.getElementById('game-audio-toggle');
-                // ミュートでまず再生を試みる
-                bgm.muted = true;
-                const p = bgm.play();
-                if (p && typeof p.then === 'function') {
-                    p.then(() => {
-                        toggle.textContent = '🔇';
-                    }).catch(() => {
-                        // autoplay blocked
-                    });
-                }
-                // 見た目だけボタンを押したようにする（実際の再生はブラウザ次第）
-                try { toggle.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); } catch (e) {}
-            } catch (e) {}
-        });
     </script>
 </body>
 
