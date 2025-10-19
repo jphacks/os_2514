@@ -387,36 +387,36 @@ export class HandTracker {
   this.onResult && this.onResult({ fps: this.fps, state: this.state, confidence: this.stateConf, charge: isCharge, actionState: this.actionState });
 
   // デバッグ HUD 表示
-  this.drawHUD(this.ctx, this.overlay, this.fps, !!normalizedLandmarks, isCharge);
+  //this.drawHUD(this.ctx, this.overlay, this.fps, !!normalizedLandmarks, isCharge);
 
     // 次フレーム
     requestAnimationFrame(() => this.processLoop());
   }
 
-  drawHUD(ctx, canvas, fps, hasLm, charge) {
-    const cssW = canvas.clientWidth || window.innerWidth;
-    const cssH = canvas.clientHeight || window.innerHeight;
-    ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-    ctx.lineWidth = 1;
-  ctx.fillRect(8, 8, 180, 56);
-  ctx.strokeRect(8, 8, 180, 56);
-    ctx.fillStyle = '#fff';
-    ctx.font = '12px system-ui, sans-serif';
-    ctx.fillText(`MP: ${this.handLandmarker ? 'OK' : 'NG'}`, 14, 25);
-  ctx.fillText(`FPS: ${Math.round(fps)}`, 14, 40);
-  // current state
-  ctx.fillStyle = 'rgba(200,220,255,0.95)';
-  ctx.font = '12px system-ui, sans-serif';
-  ctx.fillText(`STATE: ${this.state}`, 14, 54);
-    // CHARGE 表示は UI 側で削除：何も描かない
-    if (!hasLm) {
-      ctx.fillStyle = 'rgba(255,255,255,0.9)';
-      ctx.fillText('No hand', 80, 25);
-    }
-    ctx.restore();
-  }
+  // drawHUD(ctx, canvas, fps, hasLm, charge) {
+  //   const cssW = canvas.clientWidth || window.innerWidth;
+  //   const cssH = canvas.clientHeight || window.innerHeight;
+  //   ctx.save();
+  //   ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  //   ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+  //   ctx.lineWidth = 1;
+  // ctx.fillRect(8, 8, 180, 56);
+  // ctx.strokeRect(8, 8, 180, 56);
+  //   ctx.fillStyle = '#fff';
+  //   ctx.font = '12px system-ui, sans-serif';
+  //   ctx.fillText(`MP: ${this.handLandmarker ? 'OK' : 'NG'}`, 14, 25);
+  // ctx.fillText(`FPS: ${Math.round(fps)}`, 14, 40);
+  // // current state
+  // ctx.fillStyle = 'rgba(200,220,255,0.95)';
+  // ctx.font = '12px system-ui, sans-serif';
+  // ctx.fillText(`STATE: ${this.state}`, 14, 54);
+  //   // CHARGE 表示は UI 側で削除：何も描かない
+  //   if (!hasLm) {
+  //     ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  //     ctx.fillText('No hand', 80, 25);
+  //   }
+  //   ctx.restore();
+  // }
 
   normalizeLandmarks01(lm, mirror) {
     // 0..1 正規化のまま保持。ミラー時は x を反転。

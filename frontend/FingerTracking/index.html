@@ -44,6 +44,12 @@
       pointer-events: none;
     }
 
+    #startBtn {
+      position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+      z-index: 4; padding: 10px 16px; border-radius: 999px; border: none;
+      background: #36c; color: #fff; font-weight: 700; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+
     #ui {
       position: absolute;
       top: 8px;
@@ -99,15 +105,11 @@
 </head>
 
 <body>
-  <div id="app">
+  <div id="app" hidden>
     <video id="camera" playsinline muted></video>
     <canvas id="three"></canvas>
     <canvas id="overlay"></canvas>
-    <div id="ui">
-      <div>FPS: <span id="fps">-</span></div>
-      <div>State: <span id="state">NONE</span></div>
-      <div>Confidence: <span id="conf">0.00</span></div>
-    </div>
+    <button id="startBtn">開始</button>
     <div id="controls">
       <label
         style="background: rgba(0,0,0,0.35); padding:6px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2);">
@@ -132,7 +134,7 @@
   </div>
 
   <script type="module">
-    import { setBall, updatePhysics, setRunBoost, kickImpulse } from './main.js';
+    import {updatePhysics, setRunBoost, kickImpulse } from './main.js';
     import { setupRenderer, resizeRendererToDisplaySize } from './renderer.js';
     import { HandTracker } from './hand.js';
 
@@ -140,9 +142,6 @@
     const overlay = document.getElementById('overlay');
     const threeCanvas = document.getElementById('three');
     const startBtn = document.getElementById('startBtn');
-    const fpsEl = document.getElementById('fps');
-    const stateEl = document.getElementById('state');
-    const confEl = document.getElementById('conf');
     const mirrorToggle = document.getElementById('mirrorToggle');
     const deviceDialog = document.getElementById('deviceDialog');
     const cameraSelect = document.getElementById('cameraSelect');
@@ -186,73 +185,25 @@
       deviceDialog.style.display = 'flex';
     }
 
-    async function startWithDeviceId(deviceId) {
+    async function startWithDeviceId(deviceId = null) {
       try {
         if (!isSecureOrLocalhost()) {
-          throw new Error('このページは HTTPS で提供されていないため、カメラにアクセスできません。公開URL(HTTPS)で開いてください。');
+          throw new Error('このページは HTTPS か localhost で提供されている必要があります。');
         }
-        const constraints = deviceId ? { video: { deviceId: { exact: deviceId } }, audio: false } : { video: { facingMode: 'user' }, audio: false };
+        const constraints = deviceId
+          ? { video: { deviceId: { exact: deviceId } }, audio: false }
+          : { video: { facingMode: 'user' }, audio: false };
+
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
         video.srcObject = stream;
         await video.play();
+
+        // 起動後はボタンを隠す
+        startBtn.style.display = 'none';
       } catch (err) {
         console.error(err);
-        alert('カメラにアクセスできませんでした。\n' + (err && err.message ? err.message : 'Permission/HTTPS/デバイスの設定を確認してください。'));
-        startBtn.disabled = false;
-        return false;
+        alert('カメラを開始できませんでした: ' + (err?.message || '設定を確認してください'));
       }
-
-      // Three.js 初期化（描画とボール生成は renderer.js が担当）
-      three = setupRenderer(threeCanvas);
-      // renderer.setupRenderer は { scene, camera, renderer, clock, ball } を返す
-      // physics 側へ ball を渡す
-      setBall(three.ball);
-
-      // Hand tracker 初期化
-      tracker = new HandTracker({
-        video,
-        overlay,
-        mirror: mirrorToggle.checked,
-        onResult: ({ fps, state, confidence, charge }) => {
-          fpsEl.textContent = fps.toFixed(0);
-          stateEl.textContent = state;
-          confEl.textContent = confidence.toFixed(2);
-          // charge display removed
-          if (state === 'RUN') setRunBoost(confidence);
-          if (state !== lastState && state === 'KICK') {
-            kickImpulse(confidence);
-          }
-          lastState = state;
-        },
-      });
-      try {
-        await tracker.init();
-      } catch (e) {
-        console.error(e);
-        alert('MediaPipe (HandLandmarker) の初期化に失敗しました。\nネットワークや CDN へのアクセス状況を確認してください。');
-        startBtn.disabled = false;
-        startBtn.style.display = '';
-        return false;
-      }
-      tracker.start();
-
-      mirrorToggle.addEventListener('change', () => {
-        tracker.setMirror(mirrorToggle.checked);
-        video.style.transform = mirrorToggle.checked ? 'scaleX(-1)' : 'scaleX(1)';
-      });
-      video.style.transform = mirrorToggle.checked ? 'scaleX(-1)' : 'scaleX(1)';
-
-      // レンダリングループ
-      function renderLoop() {
-        resizeRendererToDisplaySize(three.renderer, three.camera);
-        updatePhysics(three.clock.getDelta());
-        three.renderer.render(three.scene, three.camera);
-        requestAnimationFrame(renderLoop);
-      }
-      requestAnimationFrame(renderLoop);
-
-      startBtn.style.display = 'none';
-      return true;
     }
 
     async function start() {
@@ -302,7 +253,7 @@
       }
     });
 
-    startBtn.addEventListener('click', () => start());
+    startBtn.addEventListener('click', () => startWithDeviceId());
   </script>
 </body>
 

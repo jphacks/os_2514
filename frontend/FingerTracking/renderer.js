@@ -21,25 +21,25 @@ export function setupRenderer(canvas) {
   scene.add(dir);
 
   // フィールド平面
-  const fieldGeo = new THREE.PlaneGeometry(20, 40);
-  const fieldMat = new THREE.MeshStandardMaterial({ color: 0x1b5e20, roughness: 1.0, metalness: 0.0 });
-  const field = new THREE.Mesh(fieldGeo, fieldMat);
-  field.rotation.x = -Math.PI / 2;
-  field.position.y = 0 - 0.001;
-  scene.add(field);
+  // const fieldGeo = new THREE.PlaneGeometry(20, 40);
+  // const fieldMat = new THREE.MeshStandardMaterial({ color: 0x1b5e20, roughness: 1.0, metalness: 0.0 });
+  // const field = new THREE.Mesh(fieldGeo, fieldMat);
+  // field.rotation.x = -Math.PI / 2;
+  // field.position.y = 0 - 0.001;
+  // scene.add(field);
 
   // ボール（物理モジュールへ参照を渡すためエクスポートする）
-  const ballGeo = new THREE.SphereGeometry(0.3, 32, 16);
-  const ballMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6, metalness: 0.1 });
-  const ball = new THREE.Mesh(ballGeo, ballMat);
-  ball.position.set(0, 0.3, 0);
-  scene.add(ball);
+  // const ballGeo = new THREE.SphereGeometry(0.3, 32, 16);
+  // const ballMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6, metalness: 0.1 });
+  // const ball = new THREE.Mesh(ballGeo, ballMat);
+  // ball.position.set(0, 0.3, 0);
+  // scene.add(ball);
 
   const clock = new THREE.Clock();
 
   window.addEventListener('resize', () => resizeRendererToDisplaySize(renderer, camera));
 
-  return { scene, camera, renderer, clock, ball, field };
+  return { scene, camera, renderer, clock};
 }
 
 export function resizeRendererToDisplaySize(renderer, camera) {

@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>机上バーチャルサッカー (リファクタリング完了版)</title>
     <style>
+        :root {
+            --mini-size-desktop: 240px;
+            --mini-size-mobile: 180px;
+        }
+
         body {
             margin: 0;
             overflow: hidden;
@@ -84,22 +89,16 @@
 
         /* 他のUIスタイル（スコアボードなど）もここに追加 */
         #finger-tracking-pane {
-            position: absolute;
-            bottom: 24px;
-            right: 24px;
-            width: 432px;
-            height: 243px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            background: rgba(0, 0, 0, 0.55);
-            backdrop-filter: blur(8px);
-            color: #fff;
-            font-size: 12px;
-            pointer-events: all;
-            display: flex;
-            flex-direction: column;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 240px;   /* 正方形 */
+            height: 240px;  /* 正方形 */
+            z-index: 10;
+            background: #000;
+            border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
         }
 
         #finger-tracking-pane.is-active {
@@ -180,12 +179,47 @@
             color: rgba(255, 255, 255, 0.85);
         }
 
-        @media (max-width: 900px) {
+        /* 追加: ミニマップも正方形に統一（同サイズ） */
+        #minimap {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: var(--mini-size-desktop);
+            height: var(--mini-size-desktop);
+            background: #222;
+            border-radius: 8px;
+            z-index: 10;
+            overflow: hidden;
+        }
+
+        /* スマホ（横画面）向け最適化 */
+        @media (max-width: 900px) and (orientation: landscape) {
             #finger-tracking-pane {
-                width: 220px;
-                height: 190px;
+                width: var(--mini-size-mobile);
+                height: var(--mini-size-mobile);
                 bottom: 16px;
                 right: 16px;
+            }
+            #minimap {
+                width: var(--mini-size-mobile);
+                height: var(--mini-size-mobile);
+                top: 16px;
+                right: 16px;
+            }
+            /* スマホではデバッグモニタは非表示（操作領域を優先） */
+            #debug-monitor {
+                display: none !important;
+            }
+            /* スマホではジョイスティックを少し大きく */
+            #joystick-container {
+                width: 180px;
+                height: 180px;
+                bottom: 20px;
+                left: 20px;
+            }
+            #joystick-thumb {
+                width: 80px;
+                height: 80px;
             }
         }
     </style>
@@ -212,13 +246,16 @@
     </div>
 
     <div id="finger-tracking-pane">
-        <iframe src="../../FingerTracking/index.html" title="Finger Tracking"
-            sandbox="allow-scripts allow-same-origin allow-camera" style="border:0;width:432px;height:243px;"></iframe>
+        <iframe
+            src="../../FingerTracking/index.html"
+            title="Finger Tracking"
+            sandbox="allow-scripts allow-same-origin"
+            style="border:0; width:100%; height:100%;"></iframe>
     </div>
 
-    <div id="minimap"
-        style="position:fixed;top:20px;right:20px;width:240px;height:160px;background:#222;border-radius:8px;z-index:10;overflow:hidden;">
-        <canvas id="minimap-canvas" width="240" height="160"></canvas>
+
+    <div id="minimap">
+        <canvas id="minimap-canvas" style="width:100%; height:100%; display:block;"></canvas>
     </div>
 
     <div id="result-modal" style="

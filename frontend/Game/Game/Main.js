@@ -107,67 +107,80 @@ window.addEventListener("message", (event) => {
 
 // ミニマップ描画
 function drawMinimap() {
+  const container = document.getElementById("minimap");
   const canvas = document.getElementById("minimap-canvas");
-  if (!canvas) return;
+  if (!container || !canvas) return;
 
-  // ミニマップ全体を1.5倍に
-  const scale = 1.5;
-  canvas.width = 160 * scale;
-  canvas.height = 160 * scale;
-
-  const ctx = canvas.getContext("2d");
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // ステージサイズ
-  const fieldW = C.FIELD_WIDTH;
-  const fieldH = C.FIELD_HEIGHT;
-
-  // ミニマップサイズをフィールドの比率に合わせて調整（横長に）
-  const margin = 10 * scale;
-  let mapW, mapH;
-  if (fieldW > fieldH) {
-    mapW = canvas.width - margin * 2;
-    mapH = mapW * (fieldH / fieldW);
-  } else {
-    mapH = canvas.height - margin * 2;
-    mapW = mapH * (fieldW / fieldH);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const cssW = Math.max(1, container.clientWidth);
+  const cssH = Math.max(1, container.clientHeight);
+  const needResize = canvas.width !== Math.floor(cssW * dpr) || canvas.height !== Math.floor(cssH * dpr);
+  if (needResize) {
+    canvas.width = Math.floor(cssW * dpr);
+    canvas.height = Math.floor(cssH * dpr);
   }
 
-  // フィールドの枠
-  ctx.strokeStyle = "#fff";
-  ctx.lineWidth = 2 * scale;
-  ctx.strokeRect(margin, margin, mapW, mapH);
+  const ctx = canvas.getContext("2d");
+  ctx.save();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssW, cssH);
 
-  // 座標変換関数（180度回転＋比率合わせ）
+  // 既存の定数・状態をそのまま利用（C と match がスコープにある前提）
+  const fieldW = C.FIELD_WIDTH ?? C.CANVAS_WIDTH;
+  const fieldH = C.FIELD_HEIGHT ?? C.CANVAS_HEIGHT;
+
+  const margin = 10;
+  let mapW, mapH;
+  if (fieldW >= fieldH) {
+    mapW = cssW - margin * 2;
+    mapH = mapW * (fieldH / fieldW);
+    if (mapH > cssH - margin * 2) {
+      mapH = cssH - margin * 2;
+      mapW = mapH * (fieldW / fieldH);
+    }
+  } else {
+    mapH = cssH - margin * 2;
+    mapW = mapH * (fieldW / fieldH);
+    if (mapW > cssW - margin * 2) {
+      mapW = cssW - margin * 2;
+      mapH = mapW * (fieldH / fieldW);
+    }
+  }
+
+  const originX = (cssW - mapW) / 2;
+  const originY = (cssH - mapH) / 2;
+
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(originX, originY, mapW, mapH);
+
   function toMinimap(x, z) {
     const normX = 1 - (x + fieldW / 2) / fieldW;
     const normZ = 1 - (z + fieldH / 2) / fieldH;
-    return {
-      x: margin + normX * mapW,
-      y: margin + normZ * mapH,
-    };
+    return { x: originX + normX * mapW, y: originY + normZ * mapH };
   }
 
   // プレイヤー・ボールの位置を描画
   const players = match.players ?? [];
-  players.forEach((player) => {
-    const pos = player.model.getPosition();
+  players.forEach((p) => {
+    const pos = p.model.getPosition();
     const { x, y } = toMinimap(pos.x, pos.z);
-    ctx.fillStyle = player.model.getTeam() === "alpha" ? "#f44" : "#44f";
+    ctx.fillStyle = p.model.getTeam() === "alpha" ? "#f44" : "#44f";
     ctx.beginPath();
-    ctx.arc(x, y, 6 * scale, 0, Math.PI * 2);
+    ctx.arc(x, y, 6, 0, Math.PI * 2);
     ctx.fill();
   });
 
-  // ボール
   if (match.ballPresenter) {
-    const ballPos = match.ballPresenter.model.getPosition();
-    const { x, y } = toMinimap(ballPos.x, ballPos.z);
+    const pos = match.ballPresenter.model.getPosition();
+    const { x, y } = toMinimap(pos.x, pos.z);
     ctx.fillStyle = "#ff0";
     ctx.beginPath();
-    ctx.arc(x, y, 4 * scale, 0, Math.PI * 2);
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
     ctx.fill();
   }
+
+  ctx.restore();
 }
 
 // --- ゲームループ ---
@@ -203,6 +216,8 @@ function animate() {
 
   // ミニマップ描画
   drawMinimap();
+
+  requestAnimationFrame(animate);
 }
 
 function showResultModal(winner, score) {
