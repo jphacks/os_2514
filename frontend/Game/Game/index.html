@@ -300,13 +300,17 @@
             position: fixed;
             top: 2vw;
             right: 2vw;
-            width: 28vw;
+            width: 14vw;
+            /* ← 28vw から半分に */
             aspect-ratio: 100 / 150;
-            /* フィールド比率（例: 100:150） */
-            max-width: 320px;
-            max-height: 480px;
-            min-width: 100px;
-            min-height: 150px;
+            max-width: 160px;
+            /* ← 320px から半分に */
+            max-height: 240px;
+            /* ← 480px から半分に */
+            min-width: 50px;
+            /* ← 100px から半分に */
+            min-height: 75px;
+            /* ← 150px から半分に */
             background: linear-gradient(135deg, rgba(0, 0, 0, 0.85) 0%, rgba(20, 30, 40, 0.85) 100%);
             border-radius: 16px;
             z-index: 10;
@@ -361,11 +365,16 @@
 
             #minimap,
             #finger-tracking-pane {
-                width: 40vw;
-                min-width: 80px;
-                min-height: 60px;
-                max-width: 180px;
-                max-height: 270px;
+                width: 20vw;
+                /* ← 40vw から半分に */
+                min-width: 40px;
+                /* ← 80px から半分に */
+                min-height: 30px;
+                /* ← 60px から半分に */
+                max-width: 90px;
+                /* ← 180px から半分に */
+                max-height: 135px;
+                /* ← 270px から半分に */
             }
         }
 
