@@ -1,0 +1,11 @@
+const MatchRepository = require('../repositories/MatchRepository');
+
+exports.getRecentMatches = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    const matches = await MatchRepository.getRecentMatches(limit);
+    res.json({ success: true, matches });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

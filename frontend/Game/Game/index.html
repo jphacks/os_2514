@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>机上バーチャルサッカー (UX改善版)</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #111;
+            font-family: 'Noto Sans JP', sans-serif;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        /* ジョイスティック */
+        #joystick-container {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            width: 150px;
+            height: 150px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, rgba(128, 128, 128, 0.25) 100%);
+            border-radius: 50%;
+            pointer-events: all;
+            user-select: none;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 2px 8px rgba(255, 255, 255, 0.1);
+            transition: transform 0.2s;
+        }
+
+        #joystick-container:active {
+            transform: scale(0.95);
+        }
+
+        #joystick-thumb {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 70px;
+            height: 70px;
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.6));
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        /* デバッグモニター */
+        #debug-monitor {
+            display: none !important;
+            
+            /* position: absolute;
+            top: 20px;
+            left: 20px;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.85) 0%, rgba(20, 20, 40, 0.85) 100%);
+            padding: 12px 16px;
+            border-radius: 12px;
+            color: white;
+            font-family: 'Courier New', monospace;
+            pointer-events: all;
+            font-size: 13px;
+            width: 220px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            transition: all 0.3s ease; */
+        }
+
+        #debug-monitor h3 {
+            margin: 0 0 12px 0;
+            border-bottom: 2px solid rgba(100, 149, 237, 0.6);
+            padding-bottom: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 700;
+            color: #6495ED;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #debug-monitor h3::before {
+            content: '▼';
+            font-size: 10px;
+            transition: transform 0.3s;
+        }
+
+        #debug-monitor.collapsed h3::before {
+            transform: rotate(-90deg);
+        }
+
+        #debug-monitor p {
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+        }
+
+        #debug-monitor p span {
+            color: #4CAF50;
+            font-weight: 600;
+        }
+
+        #debug-monitor button {
+            pointer-events: all;
+            cursor: pointer;
+            margin-top: 12px;
+            width: 100%;
+            padding: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 12px;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        #debug-monitor button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        #debug-monitor button:active {
+            transform: translateY(0);
+        }
+
+        #debug-monitor.collapsed {
+            height: 42px;
+            overflow: hidden;
+        }
+
+        /* フィンガートラッキング */
+        #finger-tracking-pane {
+            position: absolute;
+            bottom: 24px;
+            right: 24px;
+            width: 432px;
+            height: 243px;
+            border-radius: 16px;
+            border: 2px solid rgba(65, 149, 255, 0.3);
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.75) 0%, rgba(20, 30, 48, 0.75) 100%);
+            backdrop-filter: blur(12px);
+            color: #fff;
+            font-size: 12px;
+            pointer-events: all;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+            transition: all 0.3s ease;
+        }
+
+        #finger-tracking-pane:hover {
+            border-color: rgba(65, 149, 255, 0.6);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 30px rgba(65, 149, 255, 0.2);
+        }
+
+        @media (max-width: 900px) {
+            #finger-tracking-pane {
+                width: 220px;
+                height: 190px;
+                bottom: 16px;
+                right: 16px;
+            }
+        }
+
+        /* ゴールエフェクト */
+        #goal-effect {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 8em;
+            font-weight: 900;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s, transform 0.5s;
+            z-index: 9999;
+            text-shadow: 0 0 30px currentColor, 0 0 60px currentColor, 0 8px 32px rgba(0, 0, 0, 0.8);
+            letter-spacing: 0.05em;
+        }
+
+        /* パワーゲージ */
+        #power-gauge-container {
+            display: none;
+            position: fixed;
+            bottom: 220px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            height: 40px;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.85) 0%, rgba(30, 30, 50, 0.85) 100%);
+            border-radius: 20px;
+            overflow: hidden;
+            border: 3px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 2px 8px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        #power-gauge {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg,
+                    #4CAF50 0%,
+                    #8BC34A 20%,
+                    #CDDC39 40%,
+                    #FFC107 60%,
+                    #FF9800 80%,
+                    #FF5722 100%);
+            transition: width 0.1s;
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.8), inset 0 2px 8px rgba(255, 255, 255, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        #power-gauge::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            100% {
+                left: 200%;
+            }
+        }
+
+        #power-gauge-label {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: 900;
+            font-size: 16px;
+            color: white;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+            pointer-events: none;
+            letter-spacing: 0.1em;
+        }
+
+        /* スコアボード */
+        #scoreboard {
+            display: none;
+            position: absolute;
+            top: 8px;
+            /* なるべく上詰め */
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 2.5em;
+            font-weight: 900;
+            background: linear-gradient(135deg, rgba(30, 30, 40, 0.28) 0%, rgba(30, 30, 40, 0.10) 100%);
+            padding: 2px 18px;
+            /* 上下を最小限に */
+            border-radius: 14px;
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.10);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            min-height: 1em;
+            /* 文字サイズギリギリ */
+            line-height: 1.1;
+            transition: background 0.3s;
+        }
+
+        #score-alpha {
+            color: #ff4141;
+            text-shadow: 0 0 20px #ff4141, 0 4px 12px rgba(0, 0, 0, 0.6);
+            min-width: 50px;
+            text-align: center;
+        }
+
+        #score-bravo {
+            color: #4195ff;
+            text-shadow: 0 0 20px #4195ff, 0 4px 12px rgba(0, 0, 0, 0.6);
+            min-width: 50px;
+            text-align: center;
+        }
+
+        #timer {
+            color: #fff;
+            font-size: 0.8em;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+        }
+
+        /* ミニマップ：フィールド比率でアスペクト比を維持しレスポンシブ */
+        #minimap {
+            position: fixed;
+            top: 2vw;
+            right: 2vw;
+            width: 14vw;
+            /* ← 28vw から半分に */
+            aspect-ratio: 100 / 150;
+            max-width: 160px;
+            /* ← 320px から半分に */
+            max-height: 240px;
+            /* ← 480px から半分に */
+            min-width: 50px;
+            /* ← 100px から半分に */
+            min-height: 75px;
+            /* ← 150px から半分に */
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.85) 0%, rgba(20, 30, 40, 0.85) 100%);
+            border-radius: 16px;
+            z-index: 10;
+            overflow: hidden;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #minimap-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            transform: rotate(180deg);
+        }
+
+        /* 指トラッキング画面もパーセンテージ指定＋アスペクト比維持 */
+        #finger-tracking-pane {
+            position: fixed;
+            bottom: 2vw;
+            right: 2vw;
+            width: 28vw;
+            aspect-ratio: 4 / 3;
+            max-width: 320px;
+            max-height: 240px;
+            min-width: 120px;
+            min-height: 90px;
+            border-radius: 16px;
+            border: 2px solid rgba(65, 149, 255, 0.3);
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.75) 0%, rgba(20, 30, 48, 0.75) 100%);
+            backdrop-filter: blur(12px);
+            color: #fff;
+            font-size: 12px;
+            pointer-events: all;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+            transition: all 0.3s ease;
+        }
+
+        #finger-tracking-pane iframe,
+        #finger-tracking-pane canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        @media (max-width: 600px) {
+
+            #minimap,
+            #finger-tracking-pane {
+                width: 20vw;
+                /* ← 40vw から半分に */
+                min-width: 40px;
+                /* ← 80px から半分に */
+                min-height: 30px;
+                /* ← 60px から半分に */
+                max-width: 90px;
+                /* ← 180px から半分に */
+                max-height: 135px;
+                /* ← 270px から半分に */
+            }
+        }
+
+        /* リザルトモーダル */
+        #result-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.95) 100%);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            font-size: 2.5em;
+            color: #fff;
+            backdrop-filter: blur(8px);
+        }
+
+        #result-message {
+            margin-bottom: 40px;
+            font-weight: 900;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+            animation: resultPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes resultPulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        #result-reset-button {
+            font-size: 0.6em;
+            padding: 16px 48px;
+            border-radius: 16px;
+            border: none;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            font-weight: 900;
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.6);
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        #result-reset-button:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 48px rgba(102, 126, 234, 0.8);
+        }
+
+        #result-reset-button:active {
+            transform: translateY(-2px);
+        }
+
+        /* コンボカウンター */
+        #combo-counter {
+            position: fixed;
+            top: 140px;
+            left: 50%;
+            transform: translateX(-50%) scale(0);
+            font-size: 3em;
+            font-weight: 900;
+            color: #FFD700;
+            text-shadow: 0 0 30px #FFD700, 0 4px 16px rgba(0, 0, 0, 0.8);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 999;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        #combo-counter.show {
+            transform: translateX(-50%) scale(1);
+            opacity: 1;
+        }
+
+        /* ローディング画面 */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 10000;
+            transition: opacity 0.5s, visibility 0.5s;
+        }
+
+        #loading-screen.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .loading-spinner {
+            width: 80px;
+            height: 80px;
+            border: 8px solid rgba(255, 255, 255, 0.1);
+            border-top: 8px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-text {
+            margin-top: 24px;
+            color: white;
+            font-size: 1.5em;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="loading-screen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">LOADING...</div>
+    </div>
+
+    <div id="ui-container">
+        <div id="scoreboard">
+            <span id="score-alpha">0</span>
+            <span id="timer">5:00</span>
+            <span id="score-bravo">0</span>
+        </div>
+    </div>
+
+    <div id="joystick-container">
+        <div id="joystick-thumb"></div>
+    </div>
+
+    <div id="debug-monitor" class="collapsed">
+        <h3>DEBUG</h3>
+        <div id="debug-content">
+            <p>State: <span id="debug-player-state"></span></p>
+            <p>Pos: <span id="debug-player-pos"></span></p>
+            <p>Ball: <span id="debug-ball-owner"></span></p>
+            <button id="debug-reset-button">RESET GAME</button>
+        </div>
+    </div>
+
+    <div id="finger-tracking-pane">
+        <iframe src="../../FingerTracking/index.html" title="Finger Tracking"
+            sandbox="allow-scripts allow-same-origin allow-camera" style="border:0;width:100%;height:100%;"></iframe>
+    </div>
+
+    <div id="minimap">
+        <canvas id="minimap-canvas"></canvas>
+    </div>
+
+    <div id="result-modal">
+        <div id="result-message"></div>
+        <button id="result-reset-button">Play Again</button>
+    </div>
+
+    <div id="goal-effect"></div>
+
+    <div id="power-gauge-container">
+        <div id="power-gauge"></div>
+        <div id="power-gauge-label">POWER</div>
+    </div>
+
+    <div id="combo-counter">COMBO x<span id="combo-count">0</span></div>
+
+    <!-- ゲーム用BGM -->
+    <audio id="game-bgm" loop preload="auto">
+        <source src="../Music/iwashiro_fullbit_menkyo.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <!-- ゲーム用オーディオトグル（右上） -->
+    <button id="game-audio-toggle" title="音を切り替える" style="position:fixed; right:16px; top:16px; z-index:2000; background:rgba(0,0,0,0.4); color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer;">🔈</button>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+        }
+    }
+    </script>
+    <script type="module" src="Main.js"></script>
+    <script>
+        // --- ゲームBGM制御 ---
+        (function() {
+            const bgm = document.getElementById('game-bgm');
+            const toggle = document.getElementById('game-audio-toggle');
+            let started = false;
+
+            function tryStart() {
+                if (started) return;
+                bgm.muted = true;
+                const p = bgm.play();
+                if (p && typeof p.then === 'function') {
+                    p.then(() => {
+                        started = true;
+                        toggle.textContent = '🔇';
+                    }).catch(() => {
+                        started = false;
+                    });
+                }
+            }
+
+            toggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (!started) {
+                    bgm.muted = false;
+                    bgm.play().catch(() => {});
+                    started = true;
+                    toggle.textContent = '🔊';
+                    return;
+                }
+                bgm.muted = !bgm.muted;
+                toggle.textContent = bgm.muted ? '🔈' : '🔊';
+            });
+
+            function onFirstGesture() {
+                try {
+                    bgm.muted = false;
+                    const p = bgm.play();
+                    if (p && typeof p.then === 'function') {
+                        p.then(() => {
+                            started = true;
+                            toggle.textContent = '🔊';
+                        }).catch(() => {
+                            tryStart();
+                        });
+                    } else {
+                        started = true;
+                        toggle.textContent = '🔊';
+                    }
+                } catch (e) {
+                    tryStart();
+                }
+                document.removeEventListener('pointerdown', onFirstGesture);
+                document.removeEventListener('keydown', onFirstGesture);
+            }
+
+            document.addEventListener('pointerdown', onFirstGesture, { once: true });
+            document.addEventListener('keydown', onFirstGesture, { once: true });
+        })();
+    </script>
+</body>
+
+</html>

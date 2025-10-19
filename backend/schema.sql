@@ -1,0 +1,1 @@
+-- Schema moved. Use the db package: os2514-db (see backend/README.md).

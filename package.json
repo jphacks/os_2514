@@ -1,0 +1,8 @@
+{
+    "name": "os_2514-monorepo",
+    "private": true,
+    "workspaces": [
+        "backend",
+        "db"
+    ]
+}

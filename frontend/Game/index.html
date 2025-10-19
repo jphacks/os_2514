@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YUBI SOCCER - タイトル</title>
+    <style>
+        /* 全体リセットと基本スタイル */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: sans-serif;
+            overflow: hidden; /* スクロールを禁止 */
+        }
+
+        /* タイトル画面コンテナ */
+        #title-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background-image: url('./Images/yubi_title.png'); /* ⚠️ タイトル画像パス */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* ------------------ ボタンの当たり判定 (タイトル画面) ------------------ */
+
+        .title-button-overlay {
+            position: absolute;
+            background: rgba(0, 0, 0, 0); /* 完全透明な当たり判定 */
+            cursor: pointer;
+            border: none;
+            padding: 0;
+            z-index: 10; 
+        }
+
+        /* 「遊ぶ」ボタンの座標 (再調整後) */
+        #play-button {
+            top: 24%; /* さらに上へ */
+            left: 7%;
+            width: 25%; /* 横幅を小さく */
+            height: 20%;
+        }
+
+        /* 「遊び方」ボタンの座標 (再調整後) */
+        #how-to-play-button {
+            top: 47%; /* 高さ維持 */
+            left: 9%;
+            width: 26%; /* 横幅を小さく */
+            height: 20%;
+        }
+
+        /* 「技術解説」ボタンの座標 (以前の値に戻す) */
+        #tech-info-button {
+            top: 73%; /* 以前の値 */
+            left: 12%;
+            width: 25%; /* 以前の値 */
+            height: 20%;
+        }
+
+        /* ------------------ モーダル共通スタイル ------------------ */
+
+        .modal {
+            display: none; /* 初期状態は非表示 */
+            position: fixed;
+            z-index: 20;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7); /* 半透明の黒背景 */
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+            cursor: pointer; /* モーダル外であることを示す */
+        }
+
+        .modal-content-wrapper {
+            position: relative;
+            width: 90%; 
+            max-width: 900px; /* 基本の最大幅 */
+            background-size: contain; 
+            background-position: center;
+            background-repeat: no-repeat;
+            display: flex; 
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+            cursor: default; /* モーダル内ではカーソルをデフォルトに戻す */
+        }
+        
+        .close-button {
+            position: absolute;
+            top: 15px; 
+            right: 30px;
+            font-size: 40px; 
+            font-weight: bold;
+            color: white; 
+            cursor: pointer;
+            z-index: 30; 
+        }
+
+        .close-button:hover {
+            opacity: 0.8;
+        }
+
+
+        /* ------------------ 1. 遊ぶモーダル (mordal_match.PNG) ------------------ */
+        #play-modal-content-wrapper {
+            background-image: url('./Images/mordal_match.png'); /* ⚠️ 遊ぶモーダル画像パス */
+            aspect-ratio: 1.5; 
+        }
+
+        .play-modal-option-overlay {
+            position: absolute;
+            background: rgba(255, 0, 0, 0); /* 完全透明な当たり判定 */
+            cursor: pointer;
+            border: none;
+            padding: 0;
+            z-index: 10;
+            /* :hover スタイルを削除し、完全に不可視化 */
+        }
+
+
+        /* 「誰かと」ボタンの座標 (再調整) */
+        #play-option-public {
+            top: 25%;
+            left: 10%;
+            width: 37%;
+            height: 55%;
+        }
+
+        /* 「専用部屋」ボタンの座標 (再調整) */
+        #play-option-private {
+            top: 25%;
+            left: 53%;
+            width: 37%;
+            height: 55%;
+        }
+
+
+        /* ------------------ 2. ルーム作成/参加モーダル (match_in.PNG) ------------------ */
+        #room-modal-content-wrapper {
+            background-image: url('./Images/match_in.png'); /* ⚠️ ルーム作成/参加モーダル画像パス */
+            padding: 30px 0 0; 
+            aspect-ratio: 1; 
+            max-width: 900px; /* **サイズを play-modal と統一** */
+        }
+        
+        .room-modal-button-overlay {
+            position: absolute;
+            background: rgba(0, 255, 0, 0); /* 透明な当たり判定 */
+            cursor: pointer;
+            border: none;
+            padding: 0;
+            z-index: 10;
+        }
+        
+        /* 「部屋を作る」ボタンの座標 (match_in.PNG内) */
+        #room-create-button {
+            top: 25%;
+            left: 5%;
+            width: 45%;
+            height: 60%;
+        }
+
+        /* 「部屋に入る」ボタンの座標 (match_in.PNG内) */
+        #room-join-button {
+            top: 25%;
+            left: 50%;
+            width: 45%;
+            height: 60%;
+        }
+
+        #join-input-area {
+            position: absolute;
+            top: 70%; 
+            left: 5%;
+            width: 90%;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px; 
+            z-index: 11; 
+        }
+
+        #room-id-input {
+            width: calc(100% - 20px); 
+            padding: 15px; 
+            border-radius: 8px;
+            border: 2px solid #ccc;
+            box-sizing: border-box;
+            text-align: center;
+            font-size: 1.4em;
+            background-color: white; 
+        }
+        
+        #room-modal-enter-button {
+            width: calc(100% - 20px);
+            padding: 15px;
+            background-color: #3f51b5; 
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.4em;
+            font-weight: bold;
+        }
+
+        /* ------------------ 3. ルーム作成完了モーダル (コード化) ------------------ */
+        #room-created-modal-content-wrapper {
+            background: transparent;
+            box-shadow: none;
+            aspect-ratio: 1.5; 
+            max-width: 700px; 
+        }
+
+        #room-created-panel {
+            background: #e91e63; 
+            padding: 30px;
+            border-radius: 10px;
+            transform: skewX(-5deg); 
+            width: 100%;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+            position: absolute;
+            height: 100%;
+            box-sizing: border-box;
+        }
+        
+        /* 内部要素を逆スキューでまっすぐに */
+        #room-created-panel > * {
+            transform: skewX(5deg); 
+        }
+
+        #room-created-panel h2 {
+            color: white;
+            font-size: 2.2em;
+            margin-top: 10%;
+            margin-bottom: 0;
+        }
+
+        .room-id-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10% auto;
+            width: 80%;
+        }
+
+        #room-id-label {
+            background: #f8bbd0; 
+            border-radius: 10px 0 0 10px;
+            padding: 15px 20px;
+            font-weight: bold;
+            color: #a33b66; 
+            font-size: 1.2em;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            box-sizing: border-box;
+            white-space: nowrap; 
+        }
+
+        #displayed-room-id {
+            background: #f8bbd0; 
+            border: none;
+            padding: 15px;
+            font-size: 1.4em;
+            text-align: left;
+            flex-grow: 1;
+            height: 100%;
+            box-sizing: border-box;
+        }
+        
+        #copy-button {
+            background: #e91e63; 
+            color: white;
+            padding: 15px 20px;
+            border: 3px solid white; 
+            border-radius: 0 10px 10px 0;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.2em;
+            height: 100%;
+            box-sizing: border-box;
+            white-space: nowrap;
+        }
+
+        .control-buttons-overlay {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 15%;
+            width: 80%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .control-buttons-overlay button {
+            flex: 1;
+            padding: 15px 25px;
+            font-weight: bold;
+            font-size: 1.4em;
+            cursor: pointer;
+            border-radius: 40px;
+            border: none;
+            white-space: nowrap;
+        }
+
+        #cancel-button {
+            background: transparent;
+            color: white;
+            border: 3px solid white;
+        }
+
+        #enter-button {
+            background: #4caf50; 
+            color: white;
+        }
+        
+        /* ------------------ 4. 遊び方モーダル (デザイン改善) ------------------ */
+
+        /* how-to-play モーダルを画像で表示するスタイルに変更 */
+        #how-to-play-modal .modal-content-wrapper {
+            background-image: url('./Images/how_to_play.PNG'); /* ここを差し替え */
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            width: 90%;
+            max-width: 900px;
+            aspect-ratio: 16/9; /* 画像の縦横比に合わせて調整して下さい */
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+            border-radius: 8px;
+            padding: 0; /* 画像表示のため余白は不要 */
+            box-sizing: border-box;
+        }
+
+        /* モーダル内のテキストは不要なので非表示にする（close ボタンのみ表示） */
+        #how-to-play-modal .modal-content-wrapper > *:not(.close-button) {
+            display: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="title-container">
+        <button id="play-button" class="title-button-overlay" onclick="showPlayModal()"></button>
+        <button id="how-to-play-button" class="title-button-overlay" onclick="showHowToPlayModal()"></button>
+        <button id="tech-info-button" class="title-button-overlay" onclick="alert('技術解説ページへ遷移します。今回は遷移先がないためアラートを表示しました。')"></button>
+    </div>
+
+    <!-- タイトル用BGM（ループ再生） -->
+    <audio id="title-bgm" loop preload="auto">
+        <source src="./Music/iwashiro_amakuchi.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <!-- ミュート/音量ボタン（オーバーレイ） -->
+    <button id="audio-toggle" title="音を切り替える" style="position:fixed; right:16px; top:16px; z-index:50; background:rgba(0,0,0,0.4); color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer;">🔈</button>
+
+    
+<div id="play-modal" class="modal" onclick="closeModalOnClickOutside(event)">
+        <div id="play-modal-content-wrapper" class="modal-content-wrapper">
+            <span class="close-button" onclick="closeModal('play-modal')">&times;</span>
+
+            <div id="play-option-public" class="play-modal-option-overlay" onclick="location.href='./match/match.html'"></div>
+            <div id="play-option-private" class="play-modal-option-overlay" onclick="showRoomModalFromPlayModal()"></div>
+        </div>
+    </div>
+
+    
+<div id="room-modal" class="modal" onclick="closeModalOnClickOutside(event)">
+        <div id="room-modal-content-wrapper" class="modal-content-wrapper">
+            <span class="close-button" onclick="closeModal('room-modal')">&times;</span>
+
+            <div id="room-create-button" class="room-modal-button-overlay" onclick="createRoom()"></div>
+            <div id="room-join-button" class="room-modal-button-overlay" onclick="showJoinInput()"></div>
+            
+            <div id="join-input-area">
+                <input type="text" id="room-id-input" placeholder="ルームIDを入力">
+                <button id="room-modal-enter-button" onclick="joinRoom()">入室</button>
+            </div>
+        </div>
+    </div>
+    
+    
+<div id="room-created-modal" class="modal" onclick="closeModalOnClickOutside(event)">
+        <div id="room-created-modal-content-wrapper" class="modal-content-wrapper">
+            <div id="room-created-panel">
+                <span class="close-button" onclick="closeModal('room-created-modal')">&times;</span>
+                <h2>部屋を作りました！</h2>
+                
+                <div class="room-id-display">
+                    <span id="room-id-label">ルームID</span>
+                    <input type="text" id="displayed-room-id" value="XXXXXX" readonly>
+                    <button id="copy-button" onclick="copyRoomId()">コピー</button>
+                </div>
+
+                <div class="control-buttons-overlay">
+                    <button id="cancel-button" onclick="closeModal('room-created-modal'); showPlayModal();">キャンセル</button>
+                    <button id="enter-button" onclick="location.href='./match/match.html'">はいる</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+<div id="how-to-play-modal" class="modal" onclick="closeModalOnClickOutside(event)">
+        <div class="modal-content-wrapper">
+            <span class="close-button" onclick="closeModal('how-to-play-modal')">&times;</span>
+            <h2>遊び方</h2>
+            <p>
+                **ルール**: 指ではじいて、相手のゴールにシュート！<br>
+                シンプルですが、指のフリックの強弱や角度が勝敗を分けます。
+            </p>
+            <p>
+                **操作**: 自分のプレイヤーに指を置き、弾きたい方向にフリック（払う）するだけ。<br>
+                タイミングと指加減で、強力なロングシュートやテクニカルなパスも可能です。
+            </p>
+            <p>
+                **勝利条件**: 規定時間内に相手より多く得点するか、設定された点数に先に到達すると勝利です。
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let currentRoomId = '';
+        
+        /**
+         * モーダル制御関数
+         */
+        function showModal(id) {
+            document.getElementById(id).style.display = 'flex';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        // モーダル外側クリックで閉じる機能
+        function closeModalOnClickOutside(event) {
+            // クリックされた要素が、モーダルコンテナ自身 (.modal) であるか確認する
+            if (event.target.classList.contains('modal')) {
+                closeModal(event.target.id);
+            }
+        }
+
+        // 「遊ぶ」ボタンクリック
+        function showPlayModal() {
+            showModal('play-modal');
+        }
+
+        // 「遊び方」ボタンクリック
+        function showHowToPlayModal() {
+            showModal('how-to-play-modal');
+        }
+
+        // 「専用部屋」ボタンクリック (遊ぶモーダルを閉じてルームモーダルを開く)
+        function showRoomModalFromPlayModal() {
+            closeModal('play-modal');
+            showModal('room-modal');
+            // 入室入力欄を非表示にリセット
+            document.getElementById('join-input-area').style.display = 'none'; 
+        }
+
+        // ルーム作成処理 (ルーム作成完了モーダルを表示)
+        function createRoom() {
+            closeModal('room-modal');
+            
+            // 実際にはここでサーバー通信を行い、ルームIDを発行します。
+            currentRoomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+            
+            // IDをモーダルにセットして表示
+            document.getElementById('displayed-room-id').value = currentRoomId;
+            showModal('room-created-modal');
+        }
+
+        // ルームIDコピー処理
+        function copyRoomId() {
+             const roomIdInput = document.getElementById('displayed-room-id');
+             roomIdInput.select();
+             document.execCommand('copy');
+             alert('ルームIDをコピーしました: ' + currentRoomId);
+        }
+
+
+        // 「部屋にはいる」の入力欄表示
+        function showJoinInput() {
+            const inputArea = document.getElementById('join-input-area');
+            // トグル表示
+            if (inputArea.style.display === 'flex') {
+                inputArea.style.display = 'none';
+            } else {
+                inputArea.style.display = 'flex';
+            }
+        }
+
+        // ルーム参加処理
+        function joinRoom() {
+            const roomId = document.getElementById('room-id-input').value.trim();
+            if (roomId.length > 0) {
+                alert(`ルームID: ${roomId} で入室を試みます。\nマッチング画面へ遷移します。`);
+                // 実際にはサーバーにIDを送信し、マッチング画面へ遷移
+                location.href = './match/match.html';
+            } else {
+                alert('ルームIDを入力してください。');
+            }
+        }
+
+        // ------------------ BGM 制御 ------------------
+        const bgm = document.getElementById('title-bgm');
+        const audioToggle = document.getElementById('audio-toggle');
+        let hasStarted = false;
+
+        // attempt to play (used after user interaction)
+        function tryStartBgm() {
+            if (hasStarted) return;
+            // Start muted first to increase chance of autoplay succeeding on some browsers
+            bgm.muted = true;
+            const p = bgm.play();
+            if (p && typeof p.then === 'function') {
+                p.then(() => {
+                    hasStarted = true;
+                    // show muted icon until user unmutes
+                    audioToggle.textContent = '🔇';
+                }).catch(() => {
+                    // play failed (autoplay blocked), keep it ready to play on user gesture
+                    hasStarted = false;
+                });
+            }
+        }
+
+        // Toggle mute/unmute and ensure music plays after unmute
+        audioToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (!hasStarted) {
+                // user gesture: start and unmute
+                bgm.muted = false;
+                bgm.play().catch(() => {});
+                hasStarted = true;
+                audioToggle.textContent = '🔊';
+                return;
+            }
+
+            bgm.muted = !bgm.muted;
+            audioToggle.textContent = bgm.muted ? '🔈' : '🔊';
+        });
+
+        // Ensure user interactions on title buttons start the BGM (satisfies autoplay gesture requirement)
+        ['play-button', 'how-to-play-button', 'tech-info-button'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('click', () => {
+                    tryStartBgm();
+                    // if already started and muted, unmute slightly so user hears immediately
+                    if (hasStarted && bgm.muted) {
+                        // do not force unmute; keep muted until user toggles
+                    }
+                });
+            }
+        });
+
+        // Try starting BGM on first pointerdown/keydown anywhere on document (covers keyboard/touch/click)
+        // For the very first gesture on the page, unmute and play immediately so users hear audio even if
+        // autoplay was initially muted. This listener is removed after the first successful attempt.
+        function onFirstGesture() {
+            // Attempt to start and unmute so the first tap produces audible sound
+            try {
+                bgm.muted = false;
+                const p = bgm.play();
+                if (p && typeof p.then === 'function') {
+                    p.then(() => {
+                        hasStarted = true;
+                        audioToggle.textContent = '🔊';
+                    }).catch(() => {
+                        // fallback: tryStartBgm() will attempt muted play
+                        tryStartBgm();
+                    });
+                } else {
+                    hasStarted = true;
+                    audioToggle.textContent = '🔊';
+                }
+            } catch (e) {
+                tryStartBgm();
+            }
+            // remove listeners after first gesture
+            document.removeEventListener('pointerdown', onFirstGesture);
+            document.removeEventListener('keydown', onFirstGesture);
+        }
+
+        document.addEventListener('pointerdown', onFirstGesture, { once: true });
+        document.addEventListener('keydown', onFirstGesture, { once: true });
+    </script>
+</body>
+</html>

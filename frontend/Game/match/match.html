@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YUBI SOCCER - マッチング中</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            font-family: sans-serif;
+        }
+        .loading-text {
+            font-size: 2em;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .loader {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #e91e63; /* Pink color */
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1.5s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-text">マッチング中...</div>
+    <div class="loader"></div>
+    <p>対戦相手を探しています。しばらくお待ちください。</p>
+
+    <script>
+        // 3秒後にゲーム画面に自動遷移
+        setTimeout(() => {
+            // ゲーム画面（gams/game/index.html）へ遷移
+            location.href = '../Game/index.html';
+        }, 3000); // 3000ミリ秒 = 3秒
+    </script>
+</body>
+</html>`
