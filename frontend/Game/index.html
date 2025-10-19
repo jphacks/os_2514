@@ -565,46 +565,11 @@
             }
         });
 
-        // Try starting BGM on first pointerdown anywhere on document (covers keyboard/touch/click)
+        // Try starting BGM on first pointerdown/keydown anywhere on document (covers keyboard/touch/click)
+        // For the very first gesture on the page, unmute and play immediately so users hear audio even if
+        // autoplay was initially muted. This listener is removed after the first successful attempt.
         function onFirstGesture() {
-            // On the very first user gesture, unmute and play so the user hears music immediately.
-            try {
-                if (!hasStarted) {
-                    bgm.muted = false;
-                    const p = bgm.play();
-                    if (p && typeof p.then === 'function') {
-                        p.then(() => {
-                            hasStarted = true;
-                            audioToggle.textContent = '🔊';
-                        }).catch(() => {
-                            // If unmuted play is blocked, fall back to muted attempt so subsequent gestures can start it
-                            tryStartBgm();
-                        });
-                    } else {
-                        // play() may be synchronous in some contexts
-                        hasStarted = true;
-                        audioToggle.textContent = '🔊';
-                    }
-                }
-            } catch (e) {
-                // ignore errors and keep fallback behavior
-                tryStartBgm();
-            }
-
-            // remove listeners after first gesture
-            document.removeEventListener('pointerdown', onFirstGesture);
-            document.removeEventListener('keydown', onFirstGesture);
-        }
-
-        document.addEventListener('pointerdown', onFirstGesture);
-        document.addEventListener('keydown', onFirstGesture);
-
-        // --- 自動で音声ボタンを押して再生を試みる（ベストエフォート） ---
-        window.addEventListener('load', () => {
-            // まずは既存の試行（ミュートで再生を試みる）
-            tryStartBgm();
-
-            // その後アンミュートして再生を試みる（多くのブラウザではユーザー操作が必要なので失敗する可能性あり）
+            // Attempt to start and unmute so the first tap produces audible sound
             try {
                 bgm.muted = false;
                 const p = bgm.play();
@@ -613,19 +578,23 @@
                         hasStarted = true;
                         audioToggle.textContent = '🔊';
                     }).catch(() => {
-                        // autoplay blocked; 表示のみ更新
-                        audioToggle.textContent = bgm.muted ? '🔈' : '🔊';
+                        // fallback: tryStartBgm() will attempt muted play
+                        tryStartBgm();
                     });
+                } else {
+                    hasStarted = true;
+                    audioToggle.textContent = '🔊';
                 }
             } catch (e) {
-                // ignore
+                tryStartBgm();
             }
+            // remove listeners after first gesture
+            document.removeEventListener('pointerdown', onFirstGesture);
+            document.removeEventListener('keydown', onFirstGesture);
+        }
 
-            // 見た目上ボタンが押されたようにする（プログラム的な dispatch はユーザー操作とは見なされないが、UI表現のため）
-            try {
-                audioToggle.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-            } catch (e) {}
-        });
+        document.addEventListener('pointerdown', onFirstGesture, { once: true });
+        document.addEventListener('keydown', onFirstGesture, { once: true });
     </script>
 </body>
 </html>
