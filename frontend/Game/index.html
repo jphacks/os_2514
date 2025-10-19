@@ -363,6 +363,11 @@
     <!-- ミュート/音量ボタン（オーバーレイ） -->
     <button id="audio-toggle" title="音を切り替える" style="position:fixed; right:16px; top:16px; z-index:50; background:rgba(0,0,0,0.4); color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer;">🔈</button>
 
+    <!-- 決定音（ボタン選択時） -->
+    <audio id="select-sound" preload="auto">
+        <source src="./Music/select.mp3" type="audio/mpeg">
+    </audio>
+
     
 <div id="play-modal" class="modal" onclick="closeModalOnClickOutside(event)">
         <div id="play-modal-content-wrapper" class="modal-content-wrapper">
@@ -595,6 +600,26 @@
 
         document.addEventListener('pointerdown', onFirstGesture, { once: true });
         document.addEventListener('keydown', onFirstGesture, { once: true });
+
+        // Play select sound when UI buttons or clickable overlays are activated
+        const selectSound = document.getElementById('select-sound');
+        function playSelect() {
+            if (!selectSound) return;
+            // clone to allow overlapping rapid clicks
+            try {
+                const s = selectSound.cloneNode(true);
+                s.play().catch(()=>{});
+            } catch (e) {}
+        }
+
+        // Global listener for buttons and elements with onclick (covers overlays/divs)
+        document.addEventListener('click', (e) => {
+            const el = e.target;
+            if (!el) return;
+            // If a button or input[type=button], or has role=button, or has onclick attribute
+            const isButton = el.tagName === 'BUTTON' || el.getAttribute('role') === 'button' || el.getAttribute('onclick');
+            if (isButton) playSelect();
+        });
     </script>
 </body>
 </html>
