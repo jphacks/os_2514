@@ -83,7 +83,11 @@ export default class PlayerModel {
   /** ロジックから状態を更新するためのミューテータ */
   // --- Setters ---
   setPosition(x, y, z) {
-    this.#position.set(x, y, z);
+    const halfW = C.FIELD_WIDTH / 2;
+    const halfH = C.FIELD_HEIGHT / 2;
+    this.#position.x = Math.max(-halfW, Math.min(halfW, x));
+    this.#position.z = Math.max(-halfH, Math.min(halfH, z));
+    this.#position.y = y; // Y方向は制限しない（必要なら追加）
   }
   setQuaternion(quaternion) {
     this.#quaternion.copy(quaternion);
