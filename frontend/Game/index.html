@@ -18,7 +18,7 @@
             position: relative;
             width: 100vw;
             height: 100vh;
-            background-image: url('./Images/yubi_title.png'); /* ⚠️ タイトル画像パス */
+            background-image: url('./Images/yubi_title.PNG'); /* ⚠️ タイトル画像パス */
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
@@ -111,7 +111,7 @@
 
         /* ------------------ 1. 遊ぶモーダル (mordal_match.PNG) ------------------ */
         #play-modal-content-wrapper {
-            background-image: url('./Images/mordal_match.png'); /* ⚠️ 遊ぶモーダル画像パス */
+            background-image: url('./Images/mordal_match.PNG'); /* ⚠️ 遊ぶモーダル画像パス */
             aspect-ratio: 1.5; 
         }
 
@@ -145,7 +145,7 @@
 
         /* ------------------ 2. ルーム作成/参加モーダル (match_in.PNG) ------------------ */
         #room-modal-content-wrapper {
-            background-image: url('./Images/match_in.png'); /* ⚠️ ルーム作成/参加モーダル画像パス */
+            background-image: url('./Images/match_in.PNG'); /* ⚠️ ルーム作成/参加モーダル画像パス */
             padding: 30px 0 0; 
             aspect-ratio: 1; 
             max-width: 900px; /* **サイズを play-modal と統一** */
@@ -362,6 +362,11 @@
 
     <!-- ミュート/音量ボタン（オーバーレイ） -->
     <button id="audio-toggle" title="音を切り替える" style="position:fixed; right:16px; top:16px; z-index:50; background:rgba(0,0,0,0.4); color:white; border:none; padding:8px 12px; border-radius:8px; cursor:pointer;">🔈</button>
+
+    <!-- 決定音（ボタン選択時） -->
+    <audio id="select-sound" preload="auto">
+        <source src="./Music/select.mp3" type="audio/mpeg">
+    </audio>
 
     
 <div id="play-modal" class="modal" onclick="closeModalOnClickOutside(event)">
@@ -595,6 +600,26 @@
 
         document.addEventListener('pointerdown', onFirstGesture, { once: true });
         document.addEventListener('keydown', onFirstGesture, { once: true });
+
+        // Play select sound when UI buttons or clickable overlays are activated
+        const selectSound = document.getElementById('select-sound');
+        function playSelect() {
+            if (!selectSound) return;
+            // clone to allow overlapping rapid clicks
+            try {
+                const s = selectSound.cloneNode(true);
+                s.play().catch(()=>{});
+            } catch (e) {}
+        }
+
+        // Global listener for buttons and elements with onclick (covers overlays/divs)
+        document.addEventListener('click', (e) => {
+            const el = e.target;
+            if (!el) return;
+            // If a button or input[type=button], or has role=button, or has onclick attribute
+            const isButton = el.tagName === 'BUTTON' || el.getAttribute('role') === 'button' || el.getAttribute('onclick');
+            if (isButton) playSelect();
+        });
     </script>
 </body>
 </html>
