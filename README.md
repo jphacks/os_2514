@@ -1,3 +1,5 @@
+# ※このプロダクトは![このリポジトリ](https://github.com/jphacks/os_2514_2.git)に移行しています。ぜひそちらもご覧ください！
+
 # ゆびサッカー
 
 ![alt text](image.png)
